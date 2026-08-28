@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone https://github.com/open62541/open62541.git /opt/open62541 \
     && cd /opt/open62541 \
-    && git checkout v1.3 \
+    && git checkout 036b8c9 \
     && mkdir build && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release -DUA_ENABLE_ENCRYPTION=OFF .. \
     && make -j$(nproc) \
