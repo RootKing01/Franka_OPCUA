@@ -1,0 +1,17 @@
+# Cartelle generate da colcon alla radice del workspace
+build/
+install/
+log/
+
+# Precauzione extra: se in futuro build/install/log finissero
+# per errore dentro un pacchetto (come e' successo prima), ignorale comunque
+**/build/
+**/install/
+**/log/
+
+# File temporanei comuni di editor
+*.swp
+*~
+
+# File di sistema
+.DS_Store

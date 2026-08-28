@@ -1,6 +1,0 @@
-test_fake_robot 4 0.0500484
-cppcheck 4 0.0523378
-lint_cmake 4 0.0484587
-uncrustify 2 0.24921
-xmllint 4 0.174523
----
