@@ -1,0 +1,8 @@
+-- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+ - /opt/ros/humble/bin/ament_cppcheck --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml --include_dirs /root/ros2_ws/src/franka_opcua_bridge/include
+
+cppcheck 2.7 has known performance issues and therefore will not be used, set the AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS environment variable to override this.
+
+
+-- run_test.py: return code 0
+-- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml'

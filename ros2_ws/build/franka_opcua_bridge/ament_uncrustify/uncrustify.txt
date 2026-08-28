@@ -1,0 +1,22 @@
+-- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+ - /opt/ros/humble/bin/ament_uncrustify --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml
+
+No code style divergence in file 'include/franka_opcua_bridge/fake_robot.hpp'
+
+No code style divergence in file 'include/franka_opcua_bridge/i_robot.hpp'
+
+No code style divergence in file 'include/franka_opcua_bridge/robot_state_cache.hpp'
+
+No code style divergence in file 'src/fake_robot.cpp'
+
+No code style divergence in file 'src/franka_bridge_node.cpp'
+
+No code style divergence in file 'test/test_fake_robot.cpp'
+
+No code style divergence in file 'test/test_robot_state_cache.cpp'
+
+No problems found
+
+
+-- run_test.py: return code 0
+-- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml'

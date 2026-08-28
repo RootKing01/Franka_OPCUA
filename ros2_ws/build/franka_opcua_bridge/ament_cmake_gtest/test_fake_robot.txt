@@ -1,0 +1,28 @@
+-- run_test.py: invoking following command in '/root/ros2_ws/build/franka_opcua_bridge':
+ - /root/ros2_ws/build/franka_opcua_bridge/test_fake_robot --gtest_output=xml:/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml
+
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from FakeRobotTest
+[ RUN      ] FakeRobotTest.ConnectSetsConnectedState
+[       OK ] FakeRobotTest.ConnectSetsConnectedState (0 ms)
+[ RUN      ] FakeRobotTest.CannotOpenBrakesIfNotConnected
+[       OK ] FakeRobotTest.CannotOpenBrakesIfNotConnected (0 ms)
+[ RUN      ] FakeRobotTest.TaskFailsIfBrakesClosed
+[       OK ] FakeRobotTest.TaskFailsIfBrakesClosed (0 ms)
+[ RUN      ] FakeRobotTest.TaskSucceedsIfBrakesOpen
+[       OK ] FakeRobotTest.TaskSucceedsIfBrakesOpen (0 ms)
+[ RUN      ] FakeRobotTest.MoveToNamedPoseUpdatesStatus
+[       OK ] FakeRobotTest.MoveToNamedPoseUpdatesStatus (0 ms)
+[ RUN      ] FakeRobotTest.WorksThroughAbstractInterface
+[       OK ] FakeRobotTest.WorksThroughAbstractInterface (0 ms)
+[----------] 6 tests from FakeRobotTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 6 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'
+-- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'

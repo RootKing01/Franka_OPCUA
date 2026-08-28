@@ -1,0 +1,132 @@
+[0.000000] (-) TimerEvent: {}
+[0.000859] (franka_opcua_bridge) JobQueued: {'identifier': 'franka_opcua_bridge', 'dependencies': OrderedDict()}
+[0.001089] (franka_opcua_bridge) JobStarted: {'identifier': 'franka_opcua_bridge'}
+[0.097237] (-) TimerEvent: {}
+[0.119026] (franka_opcua_bridge) JobProgress: {'identifier': 'franka_opcua_bridge', 'progress': 'cmake'}
+[0.161589] (franka_opcua_bridge) JobProgress: {'identifier': 'franka_opcua_bridge', 'progress': 'build'}
+[0.172480] (franka_opcua_bridge) Command: {'cmd': ['/usr/bin/cmake', '--build', '/root/ros2_ws/build/franka_opcua_bridge', '--', '-j12', '-l12'], 'cwd': '/root/ros2_ws/build/franka_opcua_bridge', 'env': OrderedDict([('HOSTNAME', '1bb3ca07db63'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/ros2_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/root/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge:/opt/ros/humble'), ('PWD', '/root/ros2_ws/build/franka_opcua_bridge'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge:/opt/ros/humble')]), 'shell': False}
+[0.197395] (-) TimerEvent: {}
+[0.298273] (-) TimerEvent: {}
+[0.399146] (-) TimerEvent: {}
+[0.485051] (franka_opcua_bridge) StdoutLine: {'line': b'\x1b[35m\x1b[1mConsolidate compiler generated dependencies of target gtest\x1b[0m\n'}
+[0.488485] (franka_opcua_bridge) StdoutLine: {'line': b'\x1b[35m\x1b[1mConsolidate compiler generated dependencies of target gtest_main\x1b[0m\n'}
+[0.499504] (-) TimerEvent: {}
+[0.505042] (franka_opcua_bridge) StdoutLine: {'line': b'\x1b[35m\x1b[1mConsolidate compiler generated dependencies of target franka_bridge_node\x1b[0m\n'}
+[0.599931] (-) TimerEvent: {}
+[0.706690] (-) TimerEvent: {}
+[0.807638] (-) TimerEvent: {}
+[0.813636] (franka_opcua_bridge) StderrLine: {'line': b"gmake[2]: Warning: File 'gtest/CMakeFiles/gtest_main.dir/compiler_depend.make' has modification time 2.4 s in the future\n"}
+[0.831286] (franka_opcua_bridge) StderrLine: {'line': b'gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.\n'}
+[0.859825] (franka_opcua_bridge) StdoutLine: {'line': b'[ 22%] Built target gtest_main\n'}
+[0.888181] (franka_opcua_bridge) StderrLine: {'line': b"gmake[2]: Warning: File 'gtest/CMakeFiles/gtest.dir/compiler_depend.make' has modification time 2.4 s in the future\n"}
+[0.907858] (-) TimerEvent: {}
+[0.918865] (franka_opcua_bridge) StderrLine: {'line': b'gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.\n'}
+[0.950612] (franka_opcua_bridge) StdoutLine: {'line': b'[ 44%] Built target gtest\n'}
+[1.008113] (-) TimerEvent: {}
+[1.019903] (franka_opcua_bridge) StdoutLine: {'line': b'\x1b[35m\x1b[1mConsolidate compiler generated dependencies of target test_fake_robot\x1b[0m\n'}
+[1.110649] (-) TimerEvent: {}
+[1.134928] (franka_opcua_bridge) StderrLine: {'line': b"gmake[2]: Warning: File 'CMakeFiles/franka_bridge_node.dir/compiler_depend.make' has modification time 2.3 s in the future\n"}
+[1.163984] (franka_opcua_bridge) StdoutLine: {'line': b'[ 55%] \x1b[32mBuilding CXX object CMakeFiles/franka_bridge_node.dir/src/franka_bridge_node.cpp.o\x1b[0m\n'}
+[1.214689] (-) TimerEvent: {}
+[1.323843] (-) TimerEvent: {}
+[1.428776] (-) TimerEvent: {}
+[1.450187] (franka_opcua_bridge) StderrLine: {'line': b"gmake[2]: Warning: File 'CMakeFiles/test_fake_robot.dir/compiler_depend.make' has modification time 2.3 s in the future\n"}
+[1.506082] (franka_opcua_bridge) StdoutLine: {'line': b'[ 66%] \x1b[32mBuilding CXX object CMakeFiles/test_fake_robot.dir/test/test_fake_robot.cpp.o\x1b[0m\n'}
+[1.515991] (franka_opcua_bridge) StdoutLine: {'line': b'[ 77%] \x1b[32mBuilding CXX object CMakeFiles/test_fake_robot.dir/src/fake_robot.cpp.o\x1b[0m\n'}
+[1.529840] (-) TimerEvent: {}
+[1.631739] (-) TimerEvent: {}
+[1.733385] (-) TimerEvent: {}
+[1.836527] (-) TimerEvent: {}
+[1.938097] (-) TimerEvent: {}
+[2.047023] (-) TimerEvent: {}
+[2.147778] (-) TimerEvent: {}
+[2.252786] (-) TimerEvent: {}
+[2.361779] (-) TimerEvent: {}
+[2.470948] (-) TimerEvent: {}
+[2.572657] (-) TimerEvent: {}
+[2.681602] (-) TimerEvent: {}
+[2.790507] (-) TimerEvent: {}
+[2.899805] (-) TimerEvent: {}
+[3.008662] (-) TimerEvent: {}
+[3.076472] (franka_opcua_bridge) StdoutLine: {'line': b'[ 88%] \x1b[32m\x1b[1mLinking CXX executable test_fake_robot\x1b[0m\n'}
+[3.111434] (-) TimerEvent: {}
+[3.215270] (-) TimerEvent: {}
+[3.324136] (-) TimerEvent: {}
+[3.445209] (-) TimerEvent: {}
+[3.554205] (-) TimerEvent: {}
+[3.663175] (-) TimerEvent: {}
+[3.767620] (-) TimerEvent: {}
+[3.872507] (-) TimerEvent: {}
+[3.981463] (-) TimerEvent: {}
+[4.090317] (-) TimerEvent: {}
+[4.191160] (-) TimerEvent: {}
+[4.293399] (-) TimerEvent: {}
+[4.397956] (-) TimerEvent: {}
+[4.507032] (-) TimerEvent: {}
+[4.608102] (-) TimerEvent: {}
+[4.717046] (-) TimerEvent: {}
+[4.826038] (-) TimerEvent: {}
+[4.934808] (-) TimerEvent: {}
+[5.043804] (-) TimerEvent: {}
+[5.145096] (-) TimerEvent: {}
+[5.176830] (franka_opcua_bridge) StderrLine: {'line': b'gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.\n'}
+[5.207521] (franka_opcua_bridge) StdoutLine: {'line': b'[ 88%] Built target test_fake_robot\n'}
+[5.246004] (-) TimerEvent: {}
+[5.354220] (-) TimerEvent: {}
+[5.376199] (franka_opcua_bridge) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable franka_bridge_node\x1b[0m\n'}
+[5.456718] (-) TimerEvent: {}
+[5.558282] (-) TimerEvent: {}
+[5.667402] (-) TimerEvent: {}
+[5.776336] (-) TimerEvent: {}
+[5.864425] (franka_opcua_bridge) StderrLine: {'line': b'gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.\n'}
+[5.876474] (-) TimerEvent: {}
+[5.893673] (franka_opcua_bridge) StdoutLine: {'line': b'[100%] Built target franka_bridge_node\n'}
+[5.976611] (-) TimerEvent: {}
+[5.984287] (franka_opcua_bridge) CommandEnded: {'returncode': 0}
+[6.016656] (franka_opcua_bridge) JobProgress: {'identifier': 'franka_opcua_bridge', 'progress': 'install'}
+[6.031452] (franka_opcua_bridge) Command: {'cmd': ['/usr/bin/cmake', '--install', '/root/ros2_ws/build/franka_opcua_bridge'], 'cwd': '/root/ros2_ws/build/franka_opcua_bridge', 'env': OrderedDict([('HOSTNAME', '1bb3ca07db63'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/ros2_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/root/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge:/opt/ros/humble'), ('PWD', '/root/ros2_ws/build/franka_opcua_bridge'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge:/opt/ros/humble')]), 'shell': False}
+[6.046455] (franka_opcua_bridge) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[6.076761] (-) TimerEvent: {}
+[6.130283] (franka_opcua_bridge) StdoutLine: {'line': b'-- Installing: /root/ros2_ws/install/franka_opcua_bridge/lib/franka_opcua_bridge/franka_bridge_node\n'}
+[6.179442] (-) TimerEvent: {}
+[6.288965] (-) TimerEvent: {}
+[6.313337] (franka_opcua_bridge) StdoutLine: {'line': b'-- Set runtime path of "/root/ros2_ws/install/franka_opcua_bridge/lib/franka_opcua_bridge/franka_bridge_node" to ""\n'}
+[6.341696] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/package_run_dependencies/franka_opcua_bridge\n'}
+[6.379424] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/parent_prefix_path/franka_opcua_bridge\n'}
+[6.389872] (-) TimerEvent: {}
+[6.397409] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/ament_prefix_path.sh\n'}
+[6.431818] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/ament_prefix_path.dsv\n'}
+[6.462542] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/path.sh\n'}
+[6.490382] (-) TimerEvent: {}
+[6.494653] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/path.dsv\n'}
+[6.518645] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.bash\n'}
+[6.534528] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.sh\n'}
+[6.550876] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.zsh\n'}
+[6.572118] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.dsv\n'}
+[6.586841] (franka_opcua_bridge) StdoutLine: {'line': b'-- Installing: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/package.dsv\n'}
+[6.590710] (-) TimerEvent: {}
+[6.677886] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/packages/franka_opcua_bridge\n'}
+[6.691768] (-) TimerEvent: {}
+[6.748414] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/cmake/franka_opcua_bridgeConfig.cmake\n'}
+[6.784152] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/cmake/franka_opcua_bridgeConfig-version.cmake\n'}
+[6.792481] (-) TimerEvent: {}
+[6.832157] (franka_opcua_bridge) StdoutLine: {'line': b'-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/package.xml\n'}
+[6.873023] (franka_opcua_bridge) CommandEnded: {'returncode': 0}
+[6.893132] (-) TimerEvent: {}
+[7.000228] (-) TimerEvent: {}
+[7.109089] (-) TimerEvent: {}
+[7.216327] (-) TimerEvent: {}
+[7.318135] (-) TimerEvent: {}
+[7.427741] (-) TimerEvent: {}
+[7.529069] (-) TimerEvent: {}
+[7.634035] (-) TimerEvent: {}
+[7.736261] (-) TimerEvent: {}
+[7.845562] (-) TimerEvent: {}
+[7.954151] (-) TimerEvent: {}
+[8.063718] (-) TimerEvent: {}
+[8.172824] (-) TimerEvent: {}
+[8.282086] (-) TimerEvent: {}
+[8.391490] (-) TimerEvent: {}
+[8.493063] (-) TimerEvent: {}
+[8.545784] (franka_opcua_bridge) JobEnded: {'identifier': 'franka_opcua_bridge', 'rc': 0}
+[8.578342] (-) EventReactorShutdown: {}

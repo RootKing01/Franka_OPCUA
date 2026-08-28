@@ -1,0 +1,84 @@
+[0.000000] (-) TimerEvent: {}
+[0.000433] (franka_opcua_bridge) JobQueued: {'identifier': 'franka_opcua_bridge', 'dependencies': OrderedDict()}
+[0.000992] (franka_opcua_bridge) JobStarted: {'identifier': 'franka_opcua_bridge'}
+[0.072183] (franka_opcua_bridge) JobProgress: {'identifier': 'franka_opcua_bridge', 'progress': 'cmake'}
+[0.097481] (-) TimerEvent: {}
+[0.167250] (franka_opcua_bridge) Command: {'cmd': ['/usr/bin/cmake', '/root/ros2_ws/src/franka_opcua_bridge', '-DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/franka_opcua_bridge'], 'cwd': '/root/ros2_ws/build/franka_opcua_bridge', 'env': OrderedDict([('HOSTNAME', '1bb3ca07db63'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/ros2_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('PWD', '/root/ros2_ws/build/franka_opcua_bridge'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1')]), 'shell': False}
+[0.197939] (-) TimerEvent: {}
+[0.283891] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[33mCMake Warning (dev) in CMakeLists.txt:\n'}
+[0.286116] (franka_opcua_bridge) StderrLine: {'line': b'  No project() command is present.  The top-level CMakeLists.txt file must\n'}
+[0.286932] (franka_opcua_bridge) StderrLine: {'line': b'  contain a literal, direct call to the project() command.  Add a line of\n'}
+[0.287550] (franka_opcua_bridge) StderrLine: {'line': b'  code such as\n'}
+[0.288389] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[0.291154] (franka_opcua_bridge) StderrLine: {'line': b'    project(ProjectName)\n'}
+[0.292517] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[0.293554] (franka_opcua_bridge) StderrLine: {'line': b'  near the top of the file, but after cmake_minimum_required().\n'}
+[0.295260] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[0.296425] (franka_opcua_bridge) StderrLine: {'line': b'  CMake is pretending there is a "project(Project)" command on the first\n'}
+[0.298805] (-) TimerEvent: {}
+[0.299331] (franka_opcua_bridge) StderrLine: {'line': b'  line.\n'}
+[0.301518] (franka_opcua_bridge) StderrLine: {'line': b'This warning is for project developers.  Use -Wno-dev to suppress it.\n'}
+[0.303703] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[0m\n'}
+[0.401932] (-) TimerEvent: {}
+[0.511423] (-) TimerEvent: {}
+[0.616214] (-) TimerEvent: {}
+[0.663218] (franka_opcua_bridge) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.716634] (-) TimerEvent: {}
+[0.817406] (-) TimerEvent: {}
+[0.918645] (-) TimerEvent: {}
+[0.975902] (franka_opcua_bridge) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[1.019398] (-) TimerEvent: {}
+[1.089740] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[1.121930] (-) TimerEvent: {}
+[1.229987] (-) TimerEvent: {}
+[1.338288] (-) TimerEvent: {}
+[1.446595] (-) TimerEvent: {}
+[1.547897] (-) TimerEvent: {}
+[1.649497] (-) TimerEvent: {}
+[1.751994] (-) TimerEvent: {}
+[1.861647] (-) TimerEvent: {}
+[1.971047] (-) TimerEvent: {}
+[2.080543] (-) TimerEvent: {}
+[2.189790] (-) TimerEvent: {}
+[2.275600] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[2.290495] (-) TimerEvent: {}
+[2.326881] (franka_opcua_bridge) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[2.328551] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[2.330343] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[2.392971] (-) TimerEvent: {}
+[2.469253] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[2.494941] (-) TimerEvent: {}
+[2.603928] (-) TimerEvent: {}
+[2.713515] (-) TimerEvent: {}
+[2.823051] (-) TimerEvent: {}
+[2.932518] (-) TimerEvent: {}
+[3.040704] (-) TimerEvent: {}
+[3.151972] (-) TimerEvent: {}
+[3.262038] (-) TimerEvent: {}
+[3.371338] (-) TimerEvent: {}
+[3.480767] (-) TimerEvent: {}
+[3.558223] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[3.582696] (-) TimerEvent: {}
+[3.592936] (franka_opcua_bridge) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[3.594126] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[3.595768] (franka_opcua_bridge) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[3.657738] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[31mCMake Error at CMakeLists.txt:4 (ament_target_dependencies):\n'}
+[3.658586] (franka_opcua_bridge) StderrLine: {'line': b'  Unknown CMake command "ament_target_dependencies".\n'}
+[3.659775] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[3.660827] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[0m\n'}
+[3.661563] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[33mCMake Warning (dev) in CMakeLists.txt:\n'}
+[3.663733] (franka_opcua_bridge) StderrLine: {'line': b'  No cmake_minimum_required command is present.  A line of code such as\n'}
+[3.664739] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[3.665724] (franka_opcua_bridge) StderrLine: {'line': b'    cmake_minimum_required(VERSION 3.22)\n'}
+[3.667246] (franka_opcua_bridge) StderrLine: {'line': b'\n'}
+[3.668469] (franka_opcua_bridge) StderrLine: {'line': b'  should be added at the top of the file.  The version specified may be lower\n'}
+[3.669183] (franka_opcua_bridge) StderrLine: {'line': b'  if you wish to support older CMake versions for this project.  For more\n'}
+[3.670275] (franka_opcua_bridge) StderrLine: {'line': b'  information run "cmake --help-policy CMP0000".\n'}
+[3.671069] (franka_opcua_bridge) StderrLine: {'line': b'This warning is for project developers.  Use -Wno-dev to suppress it.\n'}
+[3.671834] (franka_opcua_bridge) StderrLine: {'line': b'\x1b[0m\n'}
+[3.672549] (franka_opcua_bridge) StdoutLine: {'line': b'-- Configuring incomplete, errors occurred!\n'}
+[3.673557] (franka_opcua_bridge) StdoutLine: {'line': b'See also "/root/ros2_ws/build/franka_opcua_bridge/CMakeFiles/CMakeOutput.log".\n'}
+[3.678682] (franka_opcua_bridge) CommandEnded: {'returncode': 1}
+[3.683075] (-) TimerEvent: {}
+[3.691060] (franka_opcua_bridge) JobEnded: {'identifier': 'franka_opcua_bridge', 'rc': 1}
+[3.709750] (-) EventReactorShutdown: {}

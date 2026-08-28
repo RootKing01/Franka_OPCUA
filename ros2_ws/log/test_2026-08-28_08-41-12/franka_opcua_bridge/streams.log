@@ -1,0 +1,121 @@
+[0.298s] Invoking command in '/root/ros2_ws/build/franka_opcua_bridge': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+[0.300s] UpdateCTestConfiguration  from :/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini
+[0.302s] Parse Config file:/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini
+[0.303s]    Site: 1bb3ca07db63
+[0.304s]    Build name: (empty)
+[0.306s]  Add coverage exclude regular expressions.
+[0.307s] Create new tag: 20260828-0841 - Experimental
+[0.308s] UpdateCTestConfiguration  from :/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini
+[0.311s] Parse Config file:/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini
+[0.312s] Test project /root/ros2_ws/build/franka_opcua_bridge
+[0.319s] Constructing a list of tests
+[0.331s] Done constructing a list of tests
+[0.333s] Updating test list for fixtures
+[0.334s] Added 0 tests to meet fixture requirements
+[0.335s] Checking test dependency graph...
+[0.337s] Checking test dependency graph end
+[0.338s] test 1
+[0.339s]     Start 1: test_fake_robot
+[0.340s] 
+[0.341s] 1: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_cmake_gtest/test_fake_robot.txt" "--command" "/root/ros2_ws/build/franka_opcua_bridge/test_fake_robot" "--gtest_output=xml:/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml"
+[0.343s] 1: Test timeout computed to be: 60
+[0.407s] 1: -- run_test.py: invoking following command in '/root/ros2_ws/build/franka_opcua_bridge':
+[0.408s] 1:  - /root/ros2_ws/build/franka_opcua_bridge/test_fake_robot --gtest_output=xml:/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml
+[0.445s] 1: [==========] Running 6 tests from 1 test suite.
+[0.447s] 1: [----------] Global test environment set-up.
+[0.448s] 1: [----------] 6 tests from FakeRobotTest
+[0.449s] 1: [ RUN      ] FakeRobotTest.ConnectSetsConnectedState
+[0.450s] 1: [       OK ] FakeRobotTest.ConnectSetsConnectedState (0 ms)
+[0.452s] 1: [ RUN      ] FakeRobotTest.CannotOpenBrakesIfNotConnected
+[0.453s] 1: [       OK ] FakeRobotTest.CannotOpenBrakesIfNotConnected (0 ms)
+[0.454s] 1: [ RUN      ] FakeRobotTest.TaskFailsIfBrakesClosed
+[0.455s] 1: [       OK ] FakeRobotTest.TaskFailsIfBrakesClosed (0 ms)
+[0.456s] 1: [ RUN      ] FakeRobotTest.TaskSucceedsIfBrakesOpen
+[0.457s] 1: [       OK ] FakeRobotTest.TaskSucceedsIfBrakesOpen (0 ms)
+[0.458s] 1: [ RUN      ] FakeRobotTest.MoveToNamedPoseUpdatesStatus
+[0.459s] 1: [       OK ] FakeRobotTest.MoveToNamedPoseUpdatesStatus (0 ms)
+[0.460s] 1: [ RUN      ] FakeRobotTest.WorksThroughAbstractInterface
+[0.461s] 1: [       OK ] FakeRobotTest.WorksThroughAbstractInterface (0 ms)
+[0.462s] 1: [----------] 6 tests from FakeRobotTest (0 ms total)
+[0.463s] 1: 
+[0.465s] 1: [----------] Global test environment tear-down
+[0.466s] 1: [==========] 6 tests from 1 test suite ran. (0 ms total)
+[0.468s] 1: [  PASSED  ] 6 tests.
+[0.469s] 1: -- run_test.py: return code 0
+[0.484s] 1: -- run_test.py: inject classname prefix into gtest result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'
+[0.489s] 1: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'
+[0.541s] 1/5 Test #1: test_fake_robot ..................   Passed    0.20 sec
+[0.549s] test 2
+[0.551s]     Start 2: cppcheck
+[0.552s] 
+[0.553s] 2: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_cppcheck/cppcheck.txt" "--command" "/opt/ros/humble/bin/ament_cppcheck" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml" "--include_dirs" "/root/ros2_ws/src/franka_opcua_bridge/include"
+[0.554s] 2: Test timeout computed to be: 300
+[0.611s] 2: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+[0.612s] 2:  - /opt/ros/humble/bin/ament_cppcheck --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml --include_dirs /root/ros2_ws/src/franka_opcua_bridge/include
+[0.704s] 2: cppcheck 2.7 has known performance issues and therefore will not be used, set the AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS environment variable to override this.
+[0.738s] 2: -- run_test.py: return code 0
+[0.745s] 2: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml'
+[0.763s] 2/5 Test #2: cppcheck .........................   Passed    0.21 sec
+[0.768s] test 3
+[0.769s]     Start 3: lint_cmake
+[0.770s] 
+[0.770s] 3: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_lint_cmake/lint_cmake.txt" "--command" "/opt/ros/humble/bin/ament_lint_cmake" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml"
+[0.771s] 3: Test timeout computed to be: 60
+[0.830s] 3: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+[0.832s] 3:  - /opt/ros/humble/bin/ament_lint_cmake --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml
+[0.915s] 3: 
+[0.929s] 3: No problems found
+[0.931s] 3: -- run_test.py: return code 0
+[0.943s] 3: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml'
+[0.966s] 3/5 Test #3: lint_cmake .......................   Passed    0.19 sec
+[0.971s] test 4
+[0.972s]     Start 4: uncrustify
+[0.973s] 
+[0.974s] 4: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_uncrustify/uncrustify.txt" "--command" "/opt/ros/humble/bin/ament_uncrustify" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml"
+[0.975s] 4: Test timeout computed to be: 60
+[1.066s] 4: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+[1.068s] 4:  - /opt/ros/humble/bin/ament_uncrustify --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml
+[1.423s] 4: No code style divergence in file 'include/franka_opcua_bridge/fake_robot.hpp'
+[1.426s] 4: 
+[1.428s] 4: No code style divergence in file 'include/franka_opcua_bridge/i_robot.hpp'
+[1.431s] 4: 
+[1.433s] 4: No code style divergence in file 'include/franka_opcua_bridge/robot_state_cache.hpp'
+[1.435s] 4: 
+[1.438s] 4: No code style divergence in file 'src/fake_robot.cpp'
+[1.440s] 4: 
+[1.442s] 4: No code style divergence in file 'src/franka_bridge_node.cpp'
+[1.445s] 4: 
+[1.446s] 4: No code style divergence in file 'test/test_fake_robot.cpp'
+[1.448s] 4: 
+[1.450s] 4: No code style divergence in file 'test/test_robot_state_cache.cpp'
+[1.451s] 4: 
+[1.453s] 4: No problems found
+[1.455s] 4: -- run_test.py: return code 0
+[1.456s] 4: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml'
+[1.475s] 4/5 Test #4: uncrustify .......................   Passed    0.50 sec
+[1.483s] test 5
+[1.486s]     Start 5: xmllint
+[1.488s] 
+[1.491s] 5: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_xmllint/xmllint.txt" "--command" "/opt/ros/humble/bin/ament_xmllint" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml"
+[1.494s] 5: Test timeout computed to be: 60
+[1.555s] 5: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+[1.557s] 5:  - /opt/ros/humble/bin/ament_xmllint --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml
+[2.139s] 5: File 'package.xml' is valid
+[2.141s] 5: 
+[2.144s] 5: No problems found
+[2.146s] 5: -- run_test.py: return code 0
+[2.163s] 5: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml'
+[2.186s] 5/5 Test #5: xmllint ..........................   Passed    0.70 sec
+[2.210s] 
+[2.211s] [0;32m100% tests passed[0;0m, 0 tests failed[0;0m out of 5
+[2.213s] 
+[2.215s] Label Time Summary:
+[2.217s] cppcheck      =   0.21 sec*proc (1 test)
+[2.219s] gtest         =   0.20 sec*proc (1 test)
+[2.221s] lint_cmake    =   0.19 sec*proc (1 test)
+[2.223s] linter        =   1.60 sec*proc (4 tests)
+[2.224s] uncrustify    =   0.50 sec*proc (1 test)
+[2.226s] xmllint       =   0.70 sec*proc (1 test)
+[2.227s] 
+[2.229s] Total Test time (real) =   1.89 sec
+[2.246s] Invoked command in '/root/ros2_ws/build/franka_opcua_bridge' returned '0': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process

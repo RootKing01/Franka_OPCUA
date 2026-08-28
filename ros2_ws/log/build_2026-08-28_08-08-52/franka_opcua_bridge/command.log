@@ -1,0 +1,2 @@
+Invoking command in '/root/ros2_ws/build/franka_opcua_bridge': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /root/ros2_ws/src/franka_opcua_bridge -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/franka_opcua_bridge
+Invoked command in '/root/ros2_ws/build/franka_opcua_bridge' returned '1': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /root/ros2_ws/src/franka_opcua_bridge -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/franka_opcua_bridge

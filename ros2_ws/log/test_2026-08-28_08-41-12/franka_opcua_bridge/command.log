@@ -1,0 +1,2 @@
+Invoking command in '/root/ros2_ws/build/franka_opcua_bridge': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process
+Invoked command in '/root/ros2_ws/build/franka_opcua_bridge' returned '0': /usr/bin/ctest -C Release -D ExperimentalTest --no-compress-output -V --force-new-ctest-process

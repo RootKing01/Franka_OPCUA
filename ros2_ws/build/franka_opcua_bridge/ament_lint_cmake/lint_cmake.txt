@@ -1,0 +1,9 @@
+-- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':
+ - /opt/ros/humble/bin/ament_lint_cmake --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml
+
+
+No problems found
+
+
+-- run_test.py: return code 0
+-- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml'

@@ -1,0 +1,39 @@
+[35m[1mConsolidate compiler generated dependencies of target gtest[0m
+[35m[1mConsolidate compiler generated dependencies of target gtest_main[0m
+[35m[1mConsolidate compiler generated dependencies of target franka_bridge_node[0m
+gmake[2]: Warning: File 'gtest/CMakeFiles/gtest_main.dir/compiler_depend.make' has modification time 2.4 s in the future
+gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.
+[ 22%] Built target gtest_main
+gmake[2]: Warning: File 'gtest/CMakeFiles/gtest.dir/compiler_depend.make' has modification time 2.4 s in the future
+gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.
+[ 44%] Built target gtest
+[35m[1mConsolidate compiler generated dependencies of target test_fake_robot[0m
+gmake[2]: Warning: File 'CMakeFiles/franka_bridge_node.dir/compiler_depend.make' has modification time 2.3 s in the future
+[ 55%] [32mBuilding CXX object CMakeFiles/franka_bridge_node.dir/src/franka_bridge_node.cpp.o[0m
+gmake[2]: Warning: File 'CMakeFiles/test_fake_robot.dir/compiler_depend.make' has modification time 2.3 s in the future
+[ 66%] [32mBuilding CXX object CMakeFiles/test_fake_robot.dir/test/test_fake_robot.cpp.o[0m
+[ 77%] [32mBuilding CXX object CMakeFiles/test_fake_robot.dir/src/fake_robot.cpp.o[0m
+[ 88%] [32m[1mLinking CXX executable test_fake_robot[0m
+gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.
+[ 88%] Built target test_fake_robot
+[100%] [32m[1mLinking CXX executable franka_bridge_node[0m
+gmake[2]: warning:  Clock skew detected.  Your build may be incomplete.
+[100%] Built target franka_bridge_node
+-- Install configuration: ""
+-- Installing: /root/ros2_ws/install/franka_opcua_bridge/lib/franka_opcua_bridge/franka_bridge_node
+-- Set runtime path of "/root/ros2_ws/install/franka_opcua_bridge/lib/franka_opcua_bridge/franka_bridge_node" to ""
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/package_run_dependencies/franka_opcua_bridge
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/parent_prefix_path/franka_opcua_bridge
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/ament_prefix_path.sh
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/ament_prefix_path.dsv
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/path.sh
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/environment/path.dsv
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.bash
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.sh
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.zsh
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/local_setup.dsv
+-- Installing: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/package.dsv
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/ament_index/resource_index/packages/franka_opcua_bridge
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/cmake/franka_opcua_bridgeConfig.cmake
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/cmake/franka_opcua_bridgeConfig-version.cmake
+-- Up-to-date: /root/ros2_ws/install/franka_opcua_bridge/share/franka_opcua_bridge/package.xml

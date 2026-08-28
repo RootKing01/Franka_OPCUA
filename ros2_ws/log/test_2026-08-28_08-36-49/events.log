@@ -1,0 +1,202 @@
+[0.000000] (-) TimerEvent: {}
+[0.000330] (franka_opcua_bridge) JobQueued: {'identifier': 'franka_opcua_bridge', 'dependencies': OrderedDict([('franka_opcua_bridge', '/root/ros2_ws/install/franka_opcua_bridge')])}
+[0.000841] (franka_opcua_bridge) JobStarted: {'identifier': 'franka_opcua_bridge'}
+[0.098798] (-) TimerEvent: {}
+[0.199604] (-) TimerEvent: {}
+[0.252109] (franka_opcua_bridge) Command: {'cmd': ['/usr/bin/ctest', '-C', 'Release', '-D', 'ExperimentalTest', '--no-compress-output', '-V', '--force-new-ctest-process'], 'cwd': '/root/ros2_ws/build/franka_opcua_bridge', 'env': OrderedDict([('HOSTNAME', '1bb3ca07db63'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/ros2_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('COLCON_PREFIX_PATH', '/root/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('LANG', 'C.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge:/opt/ros/humble'), ('PWD', '/root/ros2_ws/build/franka_opcua_bridge'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/ros2_ws/install/franka_opcua_bridge')]), 'shell': False}
+[0.270572] (franka_opcua_bridge) StdoutLine: {'line': b'UpdateCTestConfiguration  from :/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini\n'}
+[0.272290] (franka_opcua_bridge) StdoutLine: {'line': b'Parse Config file:/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini\n'}
+[0.273890] (franka_opcua_bridge) StdoutLine: {'line': b'   Site: 1bb3ca07db63\n'}
+[0.275242] (franka_opcua_bridge) StdoutLine: {'line': b'   Build name: (empty)\n'}
+[0.276905] (franka_opcua_bridge) StdoutLine: {'line': b' Add coverage exclude regular expressions.\n'}
+[0.279346] (franka_opcua_bridge) StdoutLine: {'line': b'Create new tag: 20260828-0836 - Experimental\n'}
+[0.281161] (franka_opcua_bridge) StdoutLine: {'line': b'UpdateCTestConfiguration  from :/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini\n'}
+[0.283387] (franka_opcua_bridge) StdoutLine: {'line': b'Parse Config file:/root/ros2_ws/build/franka_opcua_bridge/CTestConfiguration.ini\n'}
+[0.285089] (franka_opcua_bridge) StdoutLine: {'line': b'Test project /root/ros2_ws/build/franka_opcua_bridge\n'}
+[0.299854] (-) TimerEvent: {}
+[0.304173] (franka_opcua_bridge) StdoutLine: {'line': b'Constructing a list of tests\n'}
+[0.319181] (franka_opcua_bridge) StdoutLine: {'line': b'Done constructing a list of tests\n'}
+[0.320871] (franka_opcua_bridge) StdoutLine: {'line': b'Updating test list for fixtures\n'}
+[0.323374] (franka_opcua_bridge) StdoutLine: {'line': b'Added 0 tests to meet fixture requirements\n'}
+[0.324934] (franka_opcua_bridge) StdoutLine: {'line': b'Checking test dependency graph...\n'}
+[0.325705] (franka_opcua_bridge) StdoutLine: {'line': b'Checking test dependency graph end\n'}
+[0.326703] (franka_opcua_bridge) StdoutLine: {'line': b'test 1\n'}
+[0.327471] (franka_opcua_bridge) StdoutLine: {'line': b'    Start 1: test_fake_robot\n'}
+[0.328194] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[0.328941] (franka_opcua_bridge) StdoutLine: {'line': b'1: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_cmake_gtest/test_fake_robot.txt" "--command" "/root/ros2_ws/build/franka_opcua_bridge/test_fake_robot" "--gtest_output=xml:/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml"\n'}
+[0.329794] (franka_opcua_bridge) StdoutLine: {'line': b'1: Test timeout computed to be: 60\n'}
+[0.388370] (franka_opcua_bridge) StdoutLine: {'line': b"1: -- run_test.py: invoking following command in '/root/ros2_ws/build/franka_opcua_bridge':\n"}
+[0.394242] (franka_opcua_bridge) StdoutLine: {'line': b'1:  - /root/ros2_ws/build/franka_opcua_bridge/test_fake_robot --gtest_output=xml:/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml\n'}
+[0.400164] (-) TimerEvent: {}
+[0.432070] (franka_opcua_bridge) StdoutLine: {'line': b'1: [==========] Running 6 tests from 1 test suite.\n'}
+[0.433695] (franka_opcua_bridge) StdoutLine: {'line': b'1: [----------] Global test environment set-up.\n'}
+[0.434916] (franka_opcua_bridge) StdoutLine: {'line': b'1: [----------] 6 tests from FakeRobotTest\n'}
+[0.436317] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.ConnectSetsConnectedState\n'}
+[0.437974] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.ConnectSetsConnectedState (0 ms)\n'}
+[0.439656] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.CannotOpenBrakesIfNotConnected\n'}
+[0.440856] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.CannotOpenBrakesIfNotConnected (0 ms)\n'}
+[0.442115] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.TaskFailsIfBrakesClosed\n'}
+[0.443414] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.TaskFailsIfBrakesClosed (0 ms)\n'}
+[0.444722] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.TaskSucceedsIfBrakesOpen\n'}
+[0.446028] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.TaskSucceedsIfBrakesOpen (0 ms)\n'}
+[0.447400] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.MoveToNamedPoseUpdatesStatus\n'}
+[0.448615] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.MoveToNamedPoseUpdatesStatus (0 ms)\n'}
+[0.449918] (franka_opcua_bridge) StdoutLine: {'line': b'1: [ RUN      ] FakeRobotTest.WorksThroughAbstractInterface\n'}
+[0.450963] (franka_opcua_bridge) StdoutLine: {'line': b'1: [       OK ] FakeRobotTest.WorksThroughAbstractInterface (0 ms)\n'}
+[0.451992] (franka_opcua_bridge) StdoutLine: {'line': b'1: [----------] 6 tests from FakeRobotTest (0 ms total)\n'}
+[0.453072] (franka_opcua_bridge) StdoutLine: {'line': b'1: \n'}
+[0.454272] (franka_opcua_bridge) StdoutLine: {'line': b'1: [----------] Global test environment tear-down\n'}
+[0.455469] (franka_opcua_bridge) StdoutLine: {'line': b'1: [==========] 6 tests from 1 test suite ran. (0 ms total)\n'}
+[0.456649] (franka_opcua_bridge) StdoutLine: {'line': b'1: [  PASSED  ] 6 tests.\n'}
+[0.457768] (franka_opcua_bridge) StdoutLine: {'line': b'1: -- run_test.py: return code 0\n'}
+[0.464814] (franka_opcua_bridge) StdoutLine: {'line': b"1: -- run_test.py: inject classname prefix into gtest result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'\n"}
+[0.470478] (franka_opcua_bridge) StdoutLine: {'line': b"1: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/test_fake_robot.gtest.xml'\n"}
+[0.501647] (-) TimerEvent: {}
+[0.526088] (franka_opcua_bridge) StdoutLine: {'line': b'1/5 Test #1: test_fake_robot ..................   Passed    0.20 sec\n'}
+[0.532329] (franka_opcua_bridge) StdoutLine: {'line': b'test 2\n'}
+[0.534320] (franka_opcua_bridge) StdoutLine: {'line': b'    Start 2: cppcheck\n'}
+[0.535781] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[0.537208] (franka_opcua_bridge) StdoutLine: {'line': b'2: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_cppcheck/cppcheck.txt" "--command" "/opt/ros/humble/bin/ament_cppcheck" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml" "--include_dirs" "/root/ros2_ws/src/franka_opcua_bridge/include"\n'}
+[0.538841] (franka_opcua_bridge) StdoutLine: {'line': b'2: Test timeout computed to be: 300\n'}
+[0.602966] (-) TimerEvent: {}
+[0.604976] (franka_opcua_bridge) StdoutLine: {'line': b"2: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':\n"}
+[0.608306] (franka_opcua_bridge) StdoutLine: {'line': b'2:  - /opt/ros/humble/bin/ament_cppcheck --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml --include_dirs /root/ros2_ws/src/franka_opcua_bridge/include\n'}
+[0.704430] (franka_opcua_bridge) StdoutLine: {'line': b'2: cppcheck 2.7 has known performance issues and therefore will not be used, set the AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS environment variable to override this.\n'}
+[0.705745] (-) TimerEvent: {}
+[0.718254] (franka_opcua_bridge) StdoutLine: {'line': b'2: -- run_test.py: return code 0\n'}
+[0.753986] (franka_opcua_bridge) StdoutLine: {'line': b"2: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/cppcheck.xunit.xml'\n"}
+[0.773762] (franka_opcua_bridge) StdoutLine: {'line': b'2/5 Test #2: cppcheck .........................   Passed    0.24 sec\n'}
+[0.778766] (franka_opcua_bridge) StdoutLine: {'line': b'test 3\n'}
+[0.780964] (franka_opcua_bridge) StdoutLine: {'line': b'    Start 3: lint_cmake\n'}
+[0.782279] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[0.782952] (franka_opcua_bridge) StdoutLine: {'line': b'3: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_lint_cmake/lint_cmake.txt" "--command" "/opt/ros/humble/bin/ament_lint_cmake" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml"\n'}
+[0.783670] (franka_opcua_bridge) StdoutLine: {'line': b'3: Test timeout computed to be: 60\n'}
+[0.806757] (-) TimerEvent: {}
+[0.844511] (franka_opcua_bridge) StdoutLine: {'line': b"3: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':\n"}
+[0.846150] (franka_opcua_bridge) StdoutLine: {'line': b'3:  - /opt/ros/humble/bin/ament_lint_cmake --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml\n'}
+[0.907566] (-) TimerEvent: {}
+[0.937169] (franka_opcua_bridge) StdoutLine: {'line': b'3: \n'}
+[0.938331] (franka_opcua_bridge) StdoutLine: {'line': b'3: No problems found\n'}
+[0.944462] (franka_opcua_bridge) StdoutLine: {'line': b'3: -- run_test.py: return code 0\n'}
+[0.962488] (franka_opcua_bridge) StdoutLine: {'line': b"3: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/lint_cmake.xunit.xml'\n"}
+[0.985181] (franka_opcua_bridge) StdoutLine: {'line': b'3/5 Test #3: lint_cmake .......................   Passed    0.20 sec\n'}
+[0.989268] (franka_opcua_bridge) StdoutLine: {'line': b'test 4\n'}
+[0.990969] (franka_opcua_bridge) StdoutLine: {'line': b'    Start 4: uncrustify\n'}
+[0.991763] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[0.993317] (franka_opcua_bridge) StdoutLine: {'line': b'4: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_uncrustify/uncrustify.txt" "--command" "/opt/ros/humble/bin/ament_uncrustify" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml"\n'}
+[0.994107] (franka_opcua_bridge) StdoutLine: {'line': b'4: Test timeout computed to be: 60\n'}
+[1.008573] (-) TimerEvent: {}
+[1.064540] (franka_opcua_bridge) StdoutLine: {'line': b"4: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':\n"}
+[1.068159] (franka_opcua_bridge) StdoutLine: {'line': b'4:  - /opt/ros/humble/bin/ament_uncrustify --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml\n'}
+[1.108843] (-) TimerEvent: {}
+[1.214067] (-) TimerEvent: {}
+[1.317799] (-) TimerEvent: {}
+[1.426801] (-) TimerEvent: {}
+[1.458939] (franka_opcua_bridge) StdoutLine: {'line': b"4: Code style divergence in file 'test/test_robot_state_cache.cpp':\n"}
+[1.460571] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.461867] (franka_opcua_bridge) StdoutLine: {'line': b'4: --- test/test_robot_state_cache.cpp\n'}
+[1.463929] (franka_opcua_bridge) StdoutLine: {'line': b'4: +++ test/test_robot_state_cache.cpp.uncrustify\n'}
+[1.465084] (franka_opcua_bridge) StdoutLine: {'line': b'4: @@ -32,8 +32,8 @@\n'}
+[1.466366] (franka_opcua_bridge) StdoutLine: {'line': b'4: -    int i = 0;\n'}
+[1.469642] (franka_opcua_bridge) StdoutLine: {'line': b'4: -    while (!stop) {\n'}
+[1.471266] (franka_opcua_bridge) StdoutLine: {'line': b'4: -      std::vector<double> joints = {\n'}
+[1.472350] (franka_opcua_bridge) StdoutLine: {'line': b'4: -        static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};\n'}
+[1.473825] (franka_opcua_bridge) StdoutLine: {'line': b'4: -      cache.updateJointAngles(joints);\n'}
+[1.475111] (franka_opcua_bridge) StdoutLine: {'line': b'4: -      i++;\n'}
+[1.476489] (franka_opcua_bridge) StdoutLine: {'line': b'4: -    }\n'}
+[1.477193] (franka_opcua_bridge) StdoutLine: {'line': b'4: -  });\n'}
+[1.477742] (franka_opcua_bridge) StdoutLine: {'line': b'4: +      int i = 0;\n'}
+[1.478407] (franka_opcua_bridge) StdoutLine: {'line': b'4: +      while (!stop) {\n'}
+[1.479984] (franka_opcua_bridge) StdoutLine: {'line': b'4: +        std::vector<double> joints = {\n'}
+[1.480744] (franka_opcua_bridge) StdoutLine: {'line': b'4: +          static_cast<double>(i), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};\n'}
+[1.481909] (franka_opcua_bridge) StdoutLine: {'line': b'4: +        cache.updateJointAngles(joints);\n'}
+[1.483478] (franka_opcua_bridge) StdoutLine: {'line': b'4: +        i++;\n'}
+[1.484403] (franka_opcua_bridge) StdoutLine: {'line': b'4: +      }\n'}
+[1.485414] (franka_opcua_bridge) StdoutLine: {'line': b'4: +    });\n'}
+[1.486284] (franka_opcua_bridge) StdoutLine: {'line': b'4: @@ -43,8 +43,9 @@\n'}
+[1.487192] (franka_opcua_bridge) StdoutLine: {'line': b'4: -    readers.emplace_back([&cache, &stop]() {\n'}
+[1.488101] (franka_opcua_bridge) StdoutLine: {'line': b'4: -      while (!stop) {\n'}
+[1.489119] (franka_opcua_bridge) StdoutLine: {'line': b'4: -        auto joints = cache.getJointAngles();\n'}
+[1.490280] (franka_opcua_bridge) StdoutLine: {'line': b'4: -        // nessuna asserzione sul valore: verifichiamo solo che\n'}
+[1.491793] (franka_opcua_bridge) StdoutLine: {'line': b'4: -        // la lettura non corrompa memoria / non crashi\n'}
+[1.493299] (franka_opcua_bridge) StdoutLine: {'line': b'4: -        (void)joints;\n'}
+[1.494337] (franka_opcua_bridge) StdoutLine: {'line': b'4: -      }\n'}
+[1.495362] (franka_opcua_bridge) StdoutLine: {'line': b'4: -    });\n'}
+[1.496706] (franka_opcua_bridge) StdoutLine: {'line': b'4: +    readers.emplace_back(\n'}
+[1.498007] (franka_opcua_bridge) StdoutLine: {'line': b'4: +      [&cache, &stop]() {\n'}
+[1.499288] (franka_opcua_bridge) StdoutLine: {'line': b'4: +        while (!stop) {\n'}
+[1.500226] (franka_opcua_bridge) StdoutLine: {'line': b'4: +          auto joints = cache.getJointAngles();\n'}
+[1.501383] (franka_opcua_bridge) StdoutLine: {'line': b'4: +          // nessuna asserzione sul valore: verifichiamo solo che\n'}
+[1.502003] (franka_opcua_bridge) StdoutLine: {'line': b'4: +          // la lettura non corrompa memoria / non crashi\n'}
+[1.502447] (franka_opcua_bridge) StdoutLine: {'line': b'4: +          (void)joints;\n'}
+[1.503085] (franka_opcua_bridge) StdoutLine: {'line': b'4: +        }\n'}
+[1.503841] (franka_opcua_bridge) StdoutLine: {'line': b'4: +      });\n'}
+[1.504609] (franka_opcua_bridge) StdoutLine: {'line': b'4: @@ -56 +57,3 @@\n'}
+[1.505605] (franka_opcua_bridge) StdoutLine: {'line': b'4: -  for (auto & t : readers) {t.join();}\n'}
+[1.506563] (franka_opcua_bridge) StdoutLine: {'line': b'4: +  for (auto & t : readers) {\n'}
+[1.507642] (franka_opcua_bridge) StdoutLine: {'line': b'4: +    t.join();\n'}
+[1.508746] (franka_opcua_bridge) StdoutLine: {'line': b'4: +  }\n'}
+[1.509388] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.509923] (franka_opcua_bridge) StdoutLine: {'line': b'4: 1 files with code style divergence\n'}
+[1.510882] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'include/franka_opcua_bridge/fake_robot.hpp'\n"}
+[1.512082] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.513399] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'include/franka_opcua_bridge/i_robot.hpp'\n"}
+[1.514646] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.515408] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'include/franka_opcua_bridge/robot_state_cache.hpp'\n"}
+[1.515943] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.516605] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'src/fake_robot.cpp'\n"}
+[1.517353] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.518071] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'src/franka_bridge_node.cpp'\n"}
+[1.518775] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.519490] (franka_opcua_bridge) StdoutLine: {'line': b"4: No code style divergence in file 'test/test_fake_robot.cpp'\n"}
+[1.520217] (franka_opcua_bridge) StdoutLine: {'line': b'4: \n'}
+[1.521497] (franka_opcua_bridge) StdoutLine: {'line': b'4: -- run_test.py: return code 1\n'}
+[1.523266] (franka_opcua_bridge) StdoutLine: {'line': b"4: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/uncrustify.xunit.xml'\n"}
+[1.525463] (franka_opcua_bridge) StdoutLine: {'line': b'4/5 Test #4: uncrustify .......................***Failed    0.52 sec\n'}
+[1.526970] (-) TimerEvent: {}
+[1.527311] (franka_opcua_bridge) StdoutLine: {'line': b'test 5\n'}
+[1.528630] (franka_opcua_bridge) StdoutLine: {'line': b'    Start 5: xmllint\n'}
+[1.529546] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[1.530293] (franka_opcua_bridge) StdoutLine: {'line': b'5: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml" "--package-name" "franka_opcua_bridge" "--output-file" "/root/ros2_ws/build/franka_opcua_bridge/ament_xmllint/xmllint.txt" "--command" "/opt/ros/humble/bin/ament_xmllint" "--xunit-file" "/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml"\n'}
+[1.531040] (franka_opcua_bridge) StdoutLine: {'line': b'5: Test timeout computed to be: 60\n'}
+[1.585028] (franka_opcua_bridge) StdoutLine: {'line': b"5: -- run_test.py: invoking following command in '/root/ros2_ws/src/franka_opcua_bridge':\n"}
+[1.587322] (franka_opcua_bridge) StdoutLine: {'line': b'5:  - /opt/ros/humble/bin/ament_xmllint --xunit-file /root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml\n'}
+[1.628144] (-) TimerEvent: {}
+[1.729350] (-) TimerEvent: {}
+[1.833681] (-) TimerEvent: {}
+[1.940569] (-) TimerEvent: {}
+[2.050477] (-) TimerEvent: {}
+[2.156854] (-) TimerEvent: {}
+[2.265075] (-) TimerEvent: {}
+[2.373567] (-) TimerEvent: {}
+[2.482595] (-) TimerEvent: {}
+[2.538911] (franka_opcua_bridge) StdoutLine: {'line': b"5: File 'package.xml' is valid\n"}
+[2.541414] (franka_opcua_bridge) StdoutLine: {'line': b'5: \n'}
+[2.542917] (franka_opcua_bridge) StdoutLine: {'line': b'5: No problems found\n'}
+[2.551157] (franka_opcua_bridge) StdoutLine: {'line': b'5: -- run_test.py: return code 0\n'}
+[2.574359] (franka_opcua_bridge) StdoutLine: {'line': b"5: -- run_test.py: verify result file '/root/ros2_ws/build/franka_opcua_bridge/test_results/franka_opcua_bridge/xmllint.xunit.xml'\n"}
+[2.583083] (-) TimerEvent: {}
+[2.597951] (franka_opcua_bridge) StdoutLine: {'line': b'5/5 Test #5: xmllint ..........................   Passed    1.08 sec\n'}
+[2.628024] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[2.630029] (franka_opcua_bridge) StdoutLine: {'line': b'80% tests passed\x1b[0;0m, \x1b[0;31m1 tests failed\x1b[0;0m out of 5\n'}
+[2.633339] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[2.635916] (franka_opcua_bridge) StdoutLine: {'line': b'Label Time Summary:\n'}
+[2.640378] (franka_opcua_bridge) StdoutLine: {'line': b'cppcheck      =   0.24 sec*proc (1 test)\n'}
+[2.642766] (franka_opcua_bridge) StdoutLine: {'line': b'gtest         =   0.20 sec*proc (1 test)\n'}
+[2.644275] (franka_opcua_bridge) StdoutLine: {'line': b'lint_cmake    =   0.20 sec*proc (1 test)\n'}
+[2.646374] (franka_opcua_bridge) StdoutLine: {'line': b'linter        =   2.04 sec*proc (4 tests)\n'}
+[2.647645] (franka_opcua_bridge) StdoutLine: {'line': b'uncrustify    =   0.52 sec*proc (1 test)\n'}
+[2.649226] (franka_opcua_bridge) StdoutLine: {'line': b'xmllint       =   1.08 sec*proc (1 test)\n'}
+[2.651585] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[2.653650] (franka_opcua_bridge) StdoutLine: {'line': b'Total Test time (real) =   2.32 sec\n'}
+[2.655443] (franka_opcua_bridge) StdoutLine: {'line': b'\n'}
+[2.657241] (franka_opcua_bridge) StdoutLine: {'line': b'The following tests FAILED:\n'}
+[2.658838] (franka_opcua_bridge) StdoutLine: {'line': b'\t\x1b[0;31m  4 - uncrustify (Failed)\x1b[0;0m\n'}
+[2.683745] (-) TimerEvent: {}
+[2.685685] (franka_opcua_bridge) StderrLine: {'line': b'Errors while running CTest\n'}
+[2.688716] (franka_opcua_bridge) StderrLine: {'line': b'Output from these tests are in: /root/ros2_ws/build/franka_opcua_bridge/Testing/Temporary/LastTest.log\n'}
+[2.692128] (franka_opcua_bridge) StderrLine: {'line': b'Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.\n'}
+[2.694391] (franka_opcua_bridge) CommandEnded: {'returncode': 8}
+[2.696711] (franka_opcua_bridge) TestFailure: {'identifier': 'franka_opcua_bridge'}
+[2.697207] (franka_opcua_bridge) JobEnded: {'identifier': 'franka_opcua_bridge', 'rc': 0}
+[2.727758] (-) EventReactorShutdown: {}

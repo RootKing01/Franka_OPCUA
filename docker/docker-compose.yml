@@ -1,0 +1,10 @@
+services:
+  franka_dev:
+    build:
+      context: ./dev
+      dockerfile: Dockerfile
+    container_name: franka_dev
+    volumes:
+      - ../ros2_ws:/root/ros2_ws
+    stdin_open: true
+    tty: true
