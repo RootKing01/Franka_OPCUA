@@ -97,6 +97,7 @@ namespace franka_opcua_bridge{
                 IProtocolClient() = default;
 
 
+
     };
 
 
