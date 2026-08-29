@@ -35,7 +35,9 @@ namespace franka_opcua_bridge{
             
             bool writeValue( 
                  const std::vector<std::string> & variable_browse_path,
-                 const Value & out_value) override;
+                 const Value & value) override;
+
+            const std::vector<CallRecord> & callLog() const {return call_log_;}
 
         private:
 

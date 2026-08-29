@@ -48,8 +48,36 @@ namespace franka_opcua_bridge{
 
     bool FakeProtocolClient::readValue(const std::vector<std::string> & variable_browse_path, Value & out_value){
 
+        
+        if (connected_ == false) return false;
+
+        std::string path_key = pathToKey(variable_browse_path);
+
+        auto elem = variables_.find( path_key);
+
+        if (elem != variables_.end()){ // variables_.end() una "sentinella" che segna "oltre l'ultimo elemento", non un elemento vero
+            
+            //trovato elem>first è la chiave, elem->second è il value
+            out_value = elem->second;
+            return true;
+        }
+        else{
+
+            //non trovato
+            return false;
+        }
 
 
+    }
+
+
+    bool FakeProtocolClient::writeValue(const std::vector<std::string> & variable_browse_path, const Value & value){
+
+        if (connected_ == false){return false;}
+
+        std::string key = pathToKey(variable_browse_path);
+        variables_[key] = value;   // crea se non esiste, sovrascrive se esiste già
+        return true;
 
     }
 
@@ -58,6 +86,6 @@ namespace franka_opcua_bridge{
         std::string key;
         for (const auto & p : path) {key += "/" + p;}
         return key;
-}
+    }
 
-  }
+}
