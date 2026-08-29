@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "franka_opcua_bridge/fake_robot.hpp"
+#include "franka_opcua_bridge/fake_test_version/fake_robot.hpp"
 
 using franka_opcua_bridge::FakeRobot;
 using franka_opcua_bridge::IRobot;

@@ -1,4 +1,4 @@
-#include "franka_opcua_bridge/fake_robot.hpp"
+#include "franka_opcua_bridge/fake_test_version/fake_robot.hpp"
 
 namespace franka_opcua_bridge
 {

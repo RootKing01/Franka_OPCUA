@@ -27,11 +27,22 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gtest REQUIRED)
+
   ament_add_gtest(test_fake_robot
     test/test_fake_robot.cpp
-    src/fake_robot.cpp)
+    src/fake_test_version/fake_robot.cpp)
   target_include_directories(test_fake_robot PUBLIC include)
   ament_target_dependencies(test_fake_robot geometry_msgs)
+
+  ament_add_gtest(test_robot_state_cache
+    test/test_robot_state_cache.cpp)
+  target_include_directories(test_robot_state_cache PUBLIC include)
+  ament_target_dependencies(test_robot_state_cache geometry_msgs)
+
+  ament_add_gtest(test_fake_protocol_client
+    test/test_fake_protocol_client.cpp
+    src/fake_test_version/fake_protocol_client.cpp)
+  target_include_directories(test_fake_protocol_client PUBLIC include)
 endif()
 
 ament_package()

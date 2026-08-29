@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <atomic>
+#include <chrono>
 #include <thread>
 #include <vector>
 #include "franka_opcua_bridge/robot_state_cache.hpp"
