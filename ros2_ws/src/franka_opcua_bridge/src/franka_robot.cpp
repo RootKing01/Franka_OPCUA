@@ -25,7 +25,7 @@ namespace franka_opcua_bridge{
         return client_->connect(endpoint_, user_, password_);
     }
 
-    bool FrankaRobot::disconnect(){
+    void FrankaRobot::disconnect(){
 
         return client_->disconnect();
     }
