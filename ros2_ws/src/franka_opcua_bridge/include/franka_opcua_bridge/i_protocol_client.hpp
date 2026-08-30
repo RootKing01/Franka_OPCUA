@@ -79,7 +79,7 @@ public:
   virtual bool isConnected() const = 0;
 
 
-  //browse_path: es: {"Robot", "ExecutionControl", "OpenBrakes"}
+  //browse_path: es: {{"Robot", "ExecutionControl"}, "OpenBrakes"}
   virtual CallResult callMethod(
     const std::vector<std::string> & object_browse_path,
     const std::string & method_name,

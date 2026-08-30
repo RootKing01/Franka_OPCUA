@@ -14,7 +14,10 @@ namespace franka_opcua_bridge{
 
         public:
 
-            explicit FrankaRobot(std::unique_ptr<IProtocolClient> client);
+            explicit FrankaRobot(std::unique_ptr<IProtocolClient> client,
+                                 std::string endpoint,
+                                 std::string user,
+                                 std::string password);
 
             bool connect() override;
             void disconnect() override;
@@ -42,7 +45,10 @@ namespace franka_opcua_bridge{
         
         private:
 
-            static const std::vector<std::string> kExecutionControlPath; 
+            static const std::vector<std::string> kExecutionControlPath;
+            std::string endpoint_;
+            std::string user_;
+            std::string password_;
 
 
 
