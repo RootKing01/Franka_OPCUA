@@ -100,7 +100,7 @@ namespace franka_opcua_bridge{
     
     bool FrankaRobot::releaseControl(){
 
-        CallResult result = client_->callMethod(kExecutionControlPath, "FreeControlToke", {});
+        CallResult result = client_->callMethod(kExecutionControlPath, "FreeControlToken", {});
 
         return result.ok;
     }
