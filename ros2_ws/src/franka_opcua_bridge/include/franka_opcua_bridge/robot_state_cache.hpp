@@ -58,6 +58,6 @@ private:
   geometry_msgs::msg::Pose cartesian_pose_;
 };
 
-}  // namespace franka_opcua_bridge
+} 
 
-#endif  // FRANKA_OPCUA_BRIDGE__ROBOT_STATE_CACHE_HPP_
+#endif 
