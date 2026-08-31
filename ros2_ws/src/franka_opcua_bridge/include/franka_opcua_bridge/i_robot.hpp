@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "geometry_msgs/msg/pose.hpp"
 
 namespace franka_opcua_bridge
@@ -10,6 +11,7 @@ namespace franka_opcua_bridge
 
 struct RobotStatus
 {
+  virtual ~RobotStatus() = default;
   bool has_error = false;
   bool is_running = false;
   std::string error_message;
@@ -34,7 +36,7 @@ public:
   virtual bool executeNamedTask(const std::string & task_id) = 0;
   virtual bool moveToNamedPose(const std::string & pose_id) = 0;
 
-  virtual RobotStatus readStatus() = 0;
+  virtual std::unique_ptr<RobotStatus> readStatus() = 0;
   virtual std::vector<double> readJointAngles() = 0;
   virtual geometry_msgs::msg::Pose readCartesianPose() = 0;
 

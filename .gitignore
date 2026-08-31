@@ -15,3 +15,6 @@ log/
 
 # File di sistema
 .DS_Store
+
+# Editor
+.vscode/

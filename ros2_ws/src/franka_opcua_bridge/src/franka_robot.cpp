@@ -3,108 +3,135 @@
 #include <thread>
 
 
-namespace franka_opcua_bridge{
+namespace franka_opcua_bridge
+{
 
-    const std::vector<std::string> FrankaRobot::kExecutionControlPath = {"Robot", "ExecutionControl"};
-
-
-    FrankaRobot::FrankaRobot(std::unique_ptr<IProtocolClient> client, 
-                         std::string endpoint,
-                         std::string user,
-                         std::string password) : 
-                         
-                         client_(std::move(client)),
-                         endpoint_(std::move(endpoint)),
-                         user_(std::move(user)),
-                         password_(std::move(password)) {};
+const std::vector<std::string> FrankaRobot::kExecutionControlPath = {"Robot", "ExecutionControl"};
 
 
-    
-    bool FrankaRobot::connect(){
+FrankaRobot::FrankaRobot(
+  std::unique_ptr<IProtocolClient> client,
+  std::string endpoint,
+  std::string user,
+  std::string password) :
 
-        return client_->connect(endpoint_, user_, password_);
+client_(std::move(client)),
+endpoint_(std::move(endpoint)),
+user_(std::move(user)),
+password_(std::move(password)) {}
+
+
+bool FrankaRobot::connect()
+{
+
+  return client_->connect(endpoint_, user_, password_);
+}
+
+void FrankaRobot::disconnect()
+{
+
+  return client_->disconnect();
+}
+
+bool FrankaRobot::openBrakes()
+{
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "OpenBrakes", {});
+
+  return result.ok;
+
+}
+
+bool FrankaRobot::closeBrakes()
+{
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "CloseBrakes", {});
+
+  return result.ok;
+}
+
+bool FrankaRobot::areBrakesOpen()
+{
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "BrakesOpen", {});
+
+  return result.ok;
+}
+
+
+bool FrankaRobot::stop()
+{
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "StopTask", {});
+
+  return result.ok;
+}
+
+
+bool FrankaRobot::requestControl()
+{
+
+  Value out_value;
+  std::vector<std::string> browse_path = kExecutionControlPath;
+  std::string method = "ControlTokenActive";
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "RequestControlToken", {});
+
+  if (result.ok == false) {return false;}
+
+  browse_path.push_back(method);
+
+
+  //Tentativi di accesso al token per il controllo
+  for (int i = 0; i <= 10; i++) {
+
+
+    if (client_->readValue(
+        browse_path,
+        out_value) && out_value.is<bool>() && out_value.as<bool>())
+    {
+
+      return true;
     }
 
-    void FrankaRobot::disconnect(){
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        return client_->disconnect();
-    }
+  }
 
-    bool FrankaRobot::openBrakes(){
-
-        CallResult result = client_->callMethod(kExecutionControlPath, "OpenBrakes", {});
-
-        return result.ok;
-
-    }
-
-    bool FrankaRobot::closeBrakes(){
-
-        CallResult result = client_->callMethod(kExecutionControlPath, "CloseBrakes", {});
-
-        return result.ok;
-    }
-
-    bool FrankaRobot::areBrakesOpen(){
-
-        CallResult result = client_->callMethod(kExecutionControlPath, "BrakesOpen", {});
-
-        return result.ok;
-    }
+  return false;
 
 
-    bool FrankaRobot::stop(){
-
-        CallResult result = client_->callMethod(kExecutionControlPath, "StopTask", {});
-
-        return result. ok;
-    }
+}
 
 
-    bool FrankaRobot::requestControl(){
-        
-        Value out_value;
-        std::vector<std::string> browse_path = kExecutionControlPath;
-        std::string method = "ControlTokenOwner";
+bool FrankaRobot::releaseControl()
+{
 
-        CallResult result = client_->callMethod(kExecutionControlPath, "RequestControlToken", {});
-        
-        if (result.ok == false) return false; 
+  CallResult result = client_->callMethod(kExecutionControlPath, "FreeControlToken", {});
 
-        browse_path.push_back(method);
-        
-        std::string myUser = user_+ " @ OPC UA ";
+  return result.ok;
+}
 
-       
-        
-        //Tentativi di accesso al token per il controllo
-        for(int i = 0; i <=10; i++){
+bool FrankaRobot::executeNamedTask(const std::string & task_id)
+{
 
-            client_->readValue(browse_path, out_value );
-             
-            if(out_value.is<std::string>() && out_value.as<std::string>().compare(0, myUser.size(), myUser) == 0){
+  std::vector<Value> args;
+  Value elem(std::string(task_id));
 
-                return true;
-            }
-            
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+  args.push_back(elem);
 
-        }
+  CallResult result = client_->callMethod(kExecutionControlPath, "StartTask", args);
 
-        return false;
-        
+  return result.ok;
 
-       
-    }
 
-    
-    bool FrankaRobot::releaseControl(){
+}
 
-        CallResult result = client_->callMethod(kExecutionControlPath, "FreeControlToken", {});
+RobotStatus FrankaRobot::readStatus()
+{
 
-        return result.ok;
-    }
 
+}
 
 
 }

@@ -58,6 +58,6 @@ private:
   geometry_msgs::msg::Pose cartesian_pose_;
 };
 
-} 
+}
 
-#endif 
+#endif

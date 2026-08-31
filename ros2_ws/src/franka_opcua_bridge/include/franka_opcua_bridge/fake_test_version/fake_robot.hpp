@@ -18,7 +18,7 @@ public:
   bool stop() override;
   bool executeNamedTask(const std::string & task_id) override;
   bool moveToNamedPose(const std::string & pose_id) override;
-  RobotStatus readStatus() override;
+  std::unique_ptr<RobotStatus> readStatus() override;
   std::vector<double> readJointAngles() override;
   geometry_msgs::msg::Pose readCartesianPose() override;
 

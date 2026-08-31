@@ -38,11 +38,11 @@ bool FakeRobot::moveToNamedPose(const std::string & pose_id)
   return true;
 }
 
-RobotStatus FakeRobot::readStatus()
+std::unique_ptr<RobotStatus> FakeRobot::readStatus()
 {
-  RobotStatus status;
-  status.is_running = !last_task_.empty();
-  status.active_task_name = last_task_;
+  auto status = std::make_unique<RobotStatus>();
+  status->is_running = !last_task_.empty();
+  status->active_task_name = last_task_;
   return status;
 }
 

@@ -34,8 +34,8 @@ TEST(FakeRobotTest, TaskSucceedsIfBrakesOpen)
   EXPECT_TRUE(robot.executeNamedTask("some_task"));
 
   auto status = robot.readStatus();
-  EXPECT_TRUE(status.is_running);
-  EXPECT_EQ(status.active_task_name, "some_task");
+  EXPECT_TRUE(status->is_running);
+  EXPECT_EQ(status->active_task_name, "some_task");
 }
 
 TEST(FakeRobotTest, MoveToNamedPoseUpdatesStatus)
