@@ -8,6 +8,7 @@ namespace franka_opcua_bridge
 {
 
 const std::vector<std::string> FrankaRobot::kExecutionControlPath = {"Robot", "ExecutionControl"};
+const std::vector<std::string> kPoseMapPath = {"Robot","KeyValueMaps"};
 
 
 FrankaRobot::FrankaRobot(
@@ -210,6 +211,8 @@ std::vector<double> FrankaRobot::readJointAngles(){
     std::string method = "CartesianPose";
     Eigen::Matrix4d matrix;
     geometry_msgs::msg::Pose pose;
+    geometry_msgs::msg::Pose fallback;
+    fallback.orientation.w = 1.0;
     
     path.push_back(method);
 
@@ -245,6 +248,38 @@ std::vector<double> FrankaRobot::readJointAngles(){
         
     }
 
+    return fallback; 
+
+
+ }
+
+ bool FrankaRobot::moveToNamedPose(const std::string & pose_id){
+
+  std::vector<std::string> pathKeyPose = kPoseMapPath;
+  std::vector<double> values;
+  std::vector<Value> args;
+  CallResult result, resultReplace;
+  std::string lastPathElem = "KeyPoseMap";
+
+  pathKeyPose.push_back(lastPathElem);
+  args.push_back(Value(pose_id));
+
+  result = client_->callMethod(pathKeyPose, "Read", args);
+
+  if(result.ok){
+
+    if(result.output_values.empty()) return false;
+
+    values = result.output_values[0].as<std::vector<double>>();
+    
+    resultReplace = client_->callMethod(pathKeyPose, "Replace", values.as<std::map<std::string, Value>());
+
+    if(resultReplace.ok){
+
+      return this->executeNamedTask("opcua_goto");
+    }
+
+  } else return false;
 
  }
 
