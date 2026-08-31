@@ -253,34 +253,60 @@ std::vector<double> FrankaRobot::readJointAngles(){
 
  }
 
- bool FrankaRobot::moveToNamedPose(const std::string & pose_id){
-
+bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
+{
   std::vector<std::string> pathKeyPose = kPoseMapPath;
-  std::vector<double> values;
   std::vector<Value> args;
   CallResult result, resultReplace;
-  std::string lastPathElem = "KeyPoseMap";
 
-  pathKeyPose.push_back(lastPathElem);
+  pathKeyPose.push_back("KeyPoseMap");
+
+  // Read(pose_id)
   args.push_back(Value(pose_id));
 
   result = client_->callMethod(pathKeyPose, "Read", args);
 
-  if(result.ok){
+  if (!result.ok) {
+    return false;
+  }
 
-    if(result.output_values.empty()) return false;
+  // Il metodo Read deve restituire almeno un valore
+  if (result.output_values.empty()) {
+    return false;
+  }
 
-    values = result.output_values[0].as<std::vector<double>>();
-    
-    resultReplace = client_->callMethod(pathKeyPose, "Replace", values.as<std::map<std::string, Value>());
+  // Il valore restituito deve essere un vector<double>
+  if (!result.output_values[0].is<std::vector<double>>()) {
+    return false;
+  }
 
-    if(resultReplace.ok){
+  const std::vector<double> & values = result.output_values[0].as<std::vector<double>>();
 
-      return this->executeNamedTask("opcua_goto");
-    }
+  // Una posa Franka è una matrice 4x4 = 16 double
+  if (values.size() != 16) {
+    return false;
+  }
 
-  } else return false;
+  // Costruzione del KeyPosePair:
+  //
+  // Key   = "target_pose"
+  // Value = matrice 4x4 (16 double)
+  Value::Struct keyPosePair;
 
- }
+  keyPosePair["Key"] = Value(std::string("target_pose"));
+  keyPosePair["Value"] = Value(values);
 
+  // Replace(KeyPosePair)
+  std::vector<Value> replaceArgs;
+  replaceArgs.push_back(Value(keyPosePair));
+
+  resultReplace = client_->callMethod(pathKeyPose, "Replace", replaceArgs);
+
+  if (!resultReplace.ok) {
+    return false;
+  }
+
+  // Avvia il task che utilizza target_pose
+  return executeNamedTask("opcua_goto");
+}
 }
