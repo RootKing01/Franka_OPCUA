@@ -44,10 +44,13 @@ public:
   bool executeNamedTask(const std::string & task_id) override;
   bool moveToNamedPose(const std::string & pose_id) override;
 
-  RobotStatus readStatus() override;
+  std::unique_ptr<RobotStatus> readStatus() override;
   std::vector<double> readJointAngles() override;
   geometry_msgs::msg::Pose readCartesianPose() override;
 
+  template<typename T>
+  T FrankaRobot::extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
+  
 protected:
   std::unique_ptr<IProtocolClient> client_;
 
