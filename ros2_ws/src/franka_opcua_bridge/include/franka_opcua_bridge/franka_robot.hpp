@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "geometry_msgs/msg/pose.hpp"
+
 
 #include "franka_opcua_bridge/i_robot.hpp"
 #include "franka_opcua_bridge/i_protocol_client.hpp"
@@ -50,7 +52,7 @@ public:
 
   template<typename T>
   T FrankaRobot::extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
-  
+
 protected:
   std::unique_ptr<IProtocolClient> client_;
 

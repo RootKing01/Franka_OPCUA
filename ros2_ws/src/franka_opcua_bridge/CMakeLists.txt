@@ -10,11 +10,15 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
+
 
 include_directories(include)
 
 add_executable(franka_bridge_node src/franka_bridge_node.cpp)
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
+
+target_link_libraries(franka_bridge_node Eigen3::Eigen)
 
 install(TARGETS
   franka_bridge_node

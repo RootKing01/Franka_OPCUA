@@ -1,7 +1,8 @@
 #include "franka_opcua_bridge/franka_robot.hpp"
 #include <chrono>
 #include <thread>
-
+#include "geometry_msgs/msg/pose.hpp"
+#include <Eigen/Dense>
 
 namespace franka_opcua_bridge
 {
@@ -182,6 +183,7 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 }
 
 
+//Legge in radianti la rotazione di ogni giunto del braccio, non end-effector
 std::vector<double> FrankaRobot::readJointAngles(){
 
     Value jointAngles;
@@ -192,7 +194,7 @@ std::vector<double> FrankaRobot::readJointAngles(){
     
     bool success = client_->readValue(path, jointAngles);
 
-    if (success && jointAngles.is<std::vector<double>>){
+    if (success && jointAngles.is<std::vector<double>>()){
 
         return jointAngles.as<std::vector<double>>();
     
@@ -200,11 +202,49 @@ std::vector<double> FrankaRobot::readJointAngles(){
 
 }
 
+//Legge lo stato cartesiano dell'end-effector (la pinza)
+ geometry_msgs::msg::Pose FrankaRobot::readCartesianPose(){
 
- geometry_msgs::msg::Pose readCartesianPose(){
-
-
+    Value output_value;
+    std::vector<std::string> path = kExecutionControlPath;
+    std::string method = "CartesianPose";
+    Eigen::Matrix4d matrix;
+    geometry_msgs::msg::Pose pose;
     
+    path.push_back(method);
+
+    bool success = client_->readValue(path, output_value);
+
+    if(success && output_value.is<std::vector<double>>() && output_value.as<std::vector<double>>().size() == 16){
+
+        const std::vector<double>& values = output_value.as<std::vector<double>>();
+        
+        //16 double restituiti da Franka server in ordine column-major (quello che ci serve per Eigen)
+        
+        matrix = Eigen::Map<Eigen::Matrix4d>(values.data()); //values.data(): puntatore al primo elemento dei double.
+
+        //Estrazione della matrice di rotazione 3x3
+        const Eigen::Matrix3d rotation = matrix.block<3, 3>(0,0);
+
+        //Conversione della matrice di rotazione in quaternione
+
+        Eigen::Quaterniond quaternion(rotation); 
+
+        // Posizione
+        pose.position.x = matrix(0, 3);
+        pose.position.y = matrix(1, 3);
+        pose.position.z = matrix(2, 3);
+
+        // Orientamento
+        pose.orientation.x = quaternion.x();
+        pose.orientation.y = quaternion.y();
+        pose.orientation.z = quaternion.z();
+        pose.orientation.w = quaternion.w();
+
+        return pose;
+        
+    }
+
 
  }
 
