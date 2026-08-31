@@ -181,4 +181,31 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 
 }
 
+
+std::vector<double> FrankaRobot::readJointAngles(){
+
+    Value jointAngles;
+    std::vector<std::string> path = kExecutionControlPath;
+    std::string method = "JointAngles";
+
+    path.push_back(method);
+    
+    bool success = client_->readValue(path, jointAngles);
+
+    if (success && jointAngles.is<std::vector<double>>){
+
+        return jointAngles.as<std::vector<double>>();
+    
+    } else return {}; //Ritorna il vettore vuoto
+
+}
+
+
+ geometry_msgs::msg::Pose readCartesianPose(){
+
+
+    
+
+ }
+
 }
