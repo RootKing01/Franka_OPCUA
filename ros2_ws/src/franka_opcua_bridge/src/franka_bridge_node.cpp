@@ -3,8 +3,7 @@
 class FrankaBridgeNode : public rclcpp::Node
 {
 public:
-  FrankaBridgeNode()
-  : Node("franka_opcua_bridge")
+  FrankaBridgeNode() : Node("franka_opcua_bridge")
   {
     RCLCPP_INFO(this->get_logger(), "franka_opcua_bridge avviato correttamente");
   }
