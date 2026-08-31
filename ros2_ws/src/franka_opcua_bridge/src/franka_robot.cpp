@@ -288,7 +288,6 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   }
 
   // Costruzione del KeyPosePair:
-  //
   // Key   = "target_pose"
   // Value = matrice 4x4 (16 double)
   Value::Struct keyPosePair;
