@@ -94,7 +94,7 @@ TEST(FrankaRobotTest, CloseBrakesCallsCorrectMethod){
 
 }
 
-TEST(FrankaRobotTest, AreBrakesOpenCallsCorrectMethod){
+TEST(FrankaRobotTest, AreBrakesOpenReturnsBrakeState){
 
     auto fake_client = std::make_unique<FakeProtocolClient>();
     FakeProtocolClient * fake_ptr = fake_client.get();
@@ -102,8 +102,9 @@ TEST(FrankaRobotTest, AreBrakesOpenCallsCorrectMethod){
     FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
 
     bool success = robot.connect();
-
     ASSERT_TRUE(success);
+
+    fake_ptr->writeValue({"Robot","ExecutionControl","BrakesOpen"}, true);
 
     bool result = robot.areBrakesOpen();
 
