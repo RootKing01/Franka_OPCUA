@@ -4,6 +4,7 @@
 
 using franka_opcua_bridge::FrankaRobot;
 using franka_opcua_bridge::FakeProtocolClient;
+using franka_opcua_bridge::Value;
 
 
 TEST(FrankaRobotTest, RequestControlCallsCorrectMethod){
@@ -16,7 +17,7 @@ TEST(FrankaRobotTest, RequestControlCallsCorrectMethod){
     bool success = robot.connect();
     ASSERT_TRUE(success);
 
-    fake_ptr->writeValue({"Robot", "ExecutionControl", "ControlTokenActive"}, true);
+    fake_ptr->writeValue({"Robot", "ExecutionControl", "ControlTokenActive"}, Value(true));
 
     bool result = robot.requestControl();
     EXPECT_TRUE(result);
@@ -107,11 +108,30 @@ TEST(FrankaRobotTest, AreBrakesOpenReturnsBrakeState){
     bool success = robot.connect();
     ASSERT_TRUE(success);
 
-    fake_ptr->writeValue({"Robot","ExecutionControl","BrakesOpen"}, true);
+    fake_ptr->writeValue({"Robot","ExecutionControl","BrakesOpen"}, Value(true));
 
     bool result = robot.areBrakesOpen();
 
     EXPECT_TRUE(result);
+
+}
+
+
+TEST(FrankaRobotTest, AreBrakesOpenReturnsFalse){
+
+    auto fake_client = std::make_unique<FakeProtocolClient>();
+    FakeProtocolClient * fake_ptr = fake_client.get();
+
+    FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+    bool success = robot.connect();
+    ASSERT_TRUE(success);
+
+    fake_ptr->writeValue({"Robot","ExecutionControl","BrakesOpen"}, Value(false));
+
+    bool result = robot.areBrakesOpen();
+
+    EXPECT_FALSE(result);
 
 }
 
@@ -132,6 +152,29 @@ TEST(FrankaRobotTest, stopCallsCorrectMethod){
     ASSERT_EQ(log.size(), 1u);
     EXPECT_EQ(log[0].object_path, (std::vector<std::string>{"Robot", "ExecutionControl"}));
     EXPECT_EQ(log[0].method_name, "StopTask");
+}
+
+TEST(FrankaRobotTest, executeNamedPoseCallsCorrectMethod){
+
+    auto fake_client = std::make_unique<FakeProtocolClient>();
+    FakeProtocolClient * fake_ptr = fake_client.get();
+    const std::string task_id = "p0";
+
+    FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+    bool success = robot.connect();
+    ASSERT_TRUE(success);
+
+    bool taskStarted = robot.executeNamedTask(task_id);
+    EXPECT_TRUE(taskStarted);
+
+    const auto & log = fake_ptr->callLog();
+    ASSERT_EQ(log.size(), 1u);
+    EXPECT_EQ(log[0].object_path, (std::vector<std::string>{"Robot", "ExecutionControl"}));
+    EXPECT_EQ(log[0].method_name, "StartTask");
+    ASSERT_EQ(log[0].args.size(), 1u);
+    EXPECT_EQ(log[0].args[0].as<std::string>(), "p0");
+
 }
 
 
