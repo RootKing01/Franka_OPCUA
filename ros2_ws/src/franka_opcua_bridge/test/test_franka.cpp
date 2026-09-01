@@ -14,11 +14,11 @@ TEST(FrankaRobotTest, RequestControlCallsCorrectMethod){
     FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
 
     bool success = robot.connect();
-
     ASSERT_TRUE(success);
 
-    bool result = robot.requestControl();
+    fake_ptr->writeValue({"Robot", "ExecutionControl", "ControlTokenActive"}, true);
 
+    bool result = robot.requestControl();
     EXPECT_TRUE(result);
     
     const auto & log = fake_ptr->callLog();
@@ -72,6 +72,8 @@ TEST(FrankaRobotTest, OpenBrakesCallsCorrectMethod)
   EXPECT_EQ(log[0].method_name, "OpenBrakes");
 }
 
+
+
 TEST(FrankaRobotTest, CloseBrakesCallsCorrectMethod){
 
     auto fake_client = std::make_unique<FakeProtocolClient>();
@@ -93,6 +95,7 @@ TEST(FrankaRobotTest, CloseBrakesCallsCorrectMethod){
     EXPECT_EQ(log[0].method_name, "CloseBrakes");
 
 }
+
 
 TEST(FrankaRobotTest, AreBrakesOpenReturnsBrakeState){
 
