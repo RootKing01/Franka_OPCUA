@@ -54,10 +54,12 @@ bool FrankaRobot::closeBrakes()
 
 bool FrankaRobot::areBrakesOpen()
 {
+    Value out_value;
+    std::vector<std::string> path = kExecutionControlPath;
+    path.push_back("BrakesOpen");
 
-  CallResult result = client_->callMethod(kExecutionControlPath, "BrakesOpen", {});
-
-  return result.ok;
+    bool success = client_->readValue(path, out_value);
+    return success && out_value.is<bool>() && out_value.as<bool>();
 }
 
 
