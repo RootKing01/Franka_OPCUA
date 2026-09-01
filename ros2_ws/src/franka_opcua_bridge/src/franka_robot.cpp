@@ -90,9 +90,7 @@ bool FrankaRobot::requestControl()
   for (int i = 0; i <= 10; i++) {
 
 
-    if (client_->readValue(
-        browse_path,
-        out_value) && out_value.is<bool>() && out_value.as<bool>())
+    if (client_->readValue(browse_path, out_value) && out_value.is<bool>() && out_value.as<bool>())
     {
 
       return true;

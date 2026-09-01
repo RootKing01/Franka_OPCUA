@@ -5,6 +5,52 @@
 using franka_opcua_bridge::FrankaRobot;
 using franka_opcua_bridge::FakeProtocolClient;
 
+
+TEST(FrankaRobotTest, RequestControlCallsCorrectMethod){
+
+    auto fake_client = std::make_unique<FakeProtocolClient>();
+    FakeProtocolClient * fake_ptr = fake_client.get();
+
+    FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+    bool success = robot.connect();
+
+    ASSERT_TRUE(success);
+
+    bool result = robot.requestControl();
+
+    EXPECT_TRUE(result);
+    
+    const auto & log = fake_ptr->callLog();
+    ASSERT_EQ(log.size(), 1u);
+    EXPECT_EQ(log[0].object_path, (std::vector<std::string>{"Robot", "ExecutionControl"}));
+    EXPECT_EQ(log[0].method_name, "RequestControlToken");
+    
+}
+
+TEST(FrankaRobotTest, releaseControlCallsCorrectMethod){
+
+        auto fake_client = std::make_unique<FakeProtocolClient>();
+        FakeProtocolClient * fake_ptr = fake_client.get();
+
+        FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+        bool success = robot.connect();
+        ASSERT_TRUE(success);
+
+        bool result = robot.releaseControl();
+        EXPECT_TRUE(result);
+
+        const auto & log = fake_ptr->callLog();
+        ASSERT_EQ(log.size(), 1u);
+        EXPECT_EQ(log[0].object_path, (std::vector<std::string>{"Robot", "ExecutionControl"}));
+        EXPECT_EQ(log[0].method_name, "FreeControlToken");
+
+
+}
+
+
+
 TEST(FrankaRobotTest, OpenBrakesCallsCorrectMethod)
 {
   auto fake_client = std::make_unique<FakeProtocolClient>();
@@ -47,6 +93,43 @@ TEST(FrankaRobotTest, CloseBrakesCallsCorrectMethod){
     EXPECT_EQ(log[0].method_name, "CloseBrakes");
 
 }
+
+TEST(FrankaRobotTest, AreBrakesOpenCallsCorrectMethod){
+
+    auto fake_client = std::make_unique<FakeProtocolClient>();
+    FakeProtocolClient * fake_ptr = fake_client.get();
+
+    FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+    bool success = robot.connect();
+
+    ASSERT_TRUE(success);
+
+    bool result = robot.areBrakesOpen();
+
+    EXPECT_TRUE(result);
+
+}
+
+TEST(FrankaRobotTest, stopCallsCorrectMethod){
+
+    auto fake_client = std::make_unique<FakeProtocolClient>();
+    FakeProtocolClient * fake_ptr = fake_client.get();
+
+    FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+    
+    bool success = robot.connect(); 
+    ASSERT_TRUE(success);
+
+    bool result = robot.stop();
+    EXPECT_TRUE(result);
+
+    const auto & log = fake_ptr->callLog();
+    ASSERT_EQ(log.size(), 1u);
+    EXPECT_EQ(log[0].object_path, (std::vector<std::string>{"Robot", "ExecutionControl"}));
+    EXPECT_EQ(log[0].method_name, "StopTask");
+}
+
 
 int main(int argc, char ** argv)
 {
