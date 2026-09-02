@@ -5,6 +5,7 @@
 using franka_opcua_bridge::FrankaRobot;
 using franka_opcua_bridge::FakeProtocolClient;
 using franka_opcua_bridge::Value;
+using franka_opcua_bridge::FrankaRobotStatus;
 
 
 TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
@@ -210,6 +211,41 @@ TEST(FrankaRobotTest, ReadCartesianPoseCallsCorrectMethod) {
   EXPECT_EQ(pose_.orientation.z, 0.0);
   EXPECT_EQ(pose_.orientation.w, 1.0);
 
+
+}
+
+TEST(FrankaRobotTest, ReadStatuCallsCorrectMethod) {
+
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  std::vector<std::string> path_ = {"Robot", "ExecutionControl", "ExecutionStatus"};
+
+  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+  bool success = robot.connect();
+  ASSERT_TRUE(success);
+
+  Value::Struct fields;
+  fields["HasError"] = Value(false);
+  fields["IsRunning"] = Value(true);
+  fields["ErrorMessage"] = Value(std::string(""));
+  fields["ActiveTaskName"] = Value(std::string("opcua_goto"));
+  fields["ActiveTaskId"] = Value(std::string("task_0"));
+
+  bool writeSuccess = fake_ptr->writeValue(path_, Value(fields));
+  ASSERT_TRUE(writeSuccess);
+
+  auto status = robot.readStatus();
+
+  EXPECT_EQ(status->has_error, fields["HasError"].as<bool>());
+  EXPECT_EQ(status->is_running, fields["IsRunning"].as<bool>());
+  EXPECT_EQ(status->error_message, fields["ErrorMessage"].as<std::string>());
+  EXPECT_EQ(status->active_task_name, fields["ActiveTaskName"].as<std::string>());
+
+  auto franka_status = dynamic_cast<FrankaRobotStatus *>(status.get());
+  ASSERT_NE(franka_status, nullptr);
+
+  EXPECT_EQ(franka_status->active_task_id, fields["ActiveTaskId"].as<std::string>());
 
 }
 
