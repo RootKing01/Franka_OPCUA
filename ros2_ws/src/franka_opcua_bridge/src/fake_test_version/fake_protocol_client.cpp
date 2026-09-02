@@ -37,6 +37,8 @@ CallResult FakeProtocolClient::callMethod(
 
   CallResult result;
 
+  std::vector<std::string> keyMapPath_ = {"Robot", "KeyValueMaps", "KeyPoseMap"};
+
   if (connected_ == false) {
     result.ok = false;
     result.error_message = "Errore: non  connesso";
@@ -44,6 +46,24 @@ CallResult FakeProtocolClient::callMethod(
   }
 
   call_log_.push_back({object_browse_path, method_name, args});
+
+  if (object_browse_path == keyMapPath_ && method_name == "Read" && !args.empty() &&
+    args[0].is<std::string>())
+  {
+
+    std::vector<std::string> path = keyMapPath_;
+    path.push_back(method_name);
+    path.push_back(args[0].as<std::string>());
+
+    Value found_value;
+    if (this->readValue(path, found_value)) {
+
+      result.ok = true;
+      result.output_values = {found_value};
+      return result;
+    }
+
+  }
 
   result.ok = true;
   result.output_values = args;
@@ -91,6 +111,7 @@ bool FakeProtocolClient::writeValue(
   return true;
 
 }
+
 
 std::string FakeProtocolClient::pathToKey(const std::vector<std::string> & path)
 {

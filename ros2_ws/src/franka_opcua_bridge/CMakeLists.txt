@@ -18,7 +18,7 @@ include_directories(include)
 add_executable(franka_bridge_node src/franka_bridge_node.cpp)
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
 
-target_link_libraries(franka_bridge_node Eigen3::Eigen)
+
 
 install(TARGETS
   franka_bridge_node
@@ -47,6 +47,15 @@ if(BUILD_TESTING)
     test/test_fake_protocol_client.cpp
     src/fake_test_version/fake_protocol_client.cpp)
   target_include_directories(test_fake_protocol_client PUBLIC include)
+
+  ament_add_gtest(test_franka
+    test/test_franka.cpp
+    src/franka_robot.cpp
+    src/fake_test_version/fake_protocol_client.cpp)
+  target_include_directories(test_franka PUBLIC include)
+  target_include_directories(test_franka PUBLIC include /usr/include/eigen3)
+  ament_target_dependencies(test_franka geometry_msgs Eigen3)
+  target_link_libraries(franka_bridge_node Eigen3::Eigen)
 endif()
 
 ament_package()

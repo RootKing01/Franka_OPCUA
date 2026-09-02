@@ -50,10 +50,10 @@ private:
   bool connected_ = false;
   std::vector<CallRecord> call_log_;
   std::map<std::string, Value> variables_;             // simula lo storage del server
+
+
 };
 
-
 }
-
 
 #endif

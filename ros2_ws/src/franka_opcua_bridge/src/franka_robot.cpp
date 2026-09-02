@@ -8,7 +8,7 @@ namespace franka_opcua_bridge
 {
 
 const std::vector<std::string> FrankaRobot::kExecutionControlPath = {"Robot", "ExecutionControl"};
-const std::vector<std::string> kPoseMapPath = {"Robot","KeyValueMaps"};
+const std::vector<std::string> kPoseMapPath = {"Robot", "KeyValueMaps"};
 
 
 FrankaRobot::FrankaRobot(
@@ -54,12 +54,12 @@ bool FrankaRobot::closeBrakes()
 
 bool FrankaRobot::areBrakesOpen()
 {
-    Value out_value;
-    std::vector<std::string> path = kExecutionControlPath;
-    path.push_back("BrakesOpen");
+  Value out_value;
+  std::vector<std::string> path = kExecutionControlPath;
+  path.push_back("BrakesOpen");
 
-    bool success = client_->readValue(path, out_value);
-    return success && out_value.is<bool>() && out_value.as<bool>();
+  bool success = client_->readValue(path, out_value);
+  return success && out_value.is<bool>() && out_value.as<bool>();
 }
 
 
@@ -90,7 +90,9 @@ bool FrankaRobot::requestControl()
   for (int i = 0; i <= 10; i++) {
 
 
-    if (client_->readValue(browse_path, out_value) && out_value.is<bool>() && out_value.as<bool>())
+    if (client_->readValue(
+        browse_path,
+        out_value) && out_value.is<bool>() && out_value.as<bool>())
     {
 
       return true;
@@ -118,7 +120,11 @@ bool FrankaRobot::executeNamedTask(const std::string & task_id)
 {
 
   std::vector<Value> args;
-  Value elem(std::string(task_id));
+  Value elem{std::string(task_id)}; //Value elem(std::string(task_id))->"Vexing Parse:"Questo è un caso classico e famoso in C++
+                                    //(chiamato "most vexing parse"): il compilatore interpreta questa sintassi come la dichiarazione
+                                    //di una funzione chiamata elem, che prende un std::string e restituisce un Value — non come la
+                                    //costruzione di una variabile. È ambiguo per il linguaggio, anche se l'intento è chiaro a noi.
+
 
   args.push_back(elem);
 
@@ -131,127 +137,133 @@ bool FrankaRobot::executeNamedTask(const std::string & task_id)
 
 
 template<typename T>
-T FrankaRobot::extractField(const Value::Struct & fields, const std::string & key, const T & default_value){
+T FrankaRobot::extractField(
+  const Value::Struct & fields, const std::string & key,
+  const T & default_value)
+{
 
-    Value out_value;
-    auto elem = fields.find(key);
+  Value out_value;
+  auto elem = fields.find(key);
 
-    if (elem != fields.end()) {      //.end() una "sentinella" che segna "oltre l'ultimo elemento", non un elemento vero
+  if (elem != fields.end()) {        //.end() una "sentinella" che segna "oltre l'ultimo elemento", non un elemento vero
 
     //trovato elem->first è la chiave, elem->second è il value
     out_value = elem->second;
 
-    if (out_value.is<T>()) return out_value.as<T>(); else return default_value;
+    if (out_value.is<T>()) {return out_value.as<T>();} else {return default_value;}
 
-    } else return default_value;
+  } else {return default_value;}
 
 }
 
 
 std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 {
-    auto robotStatus = std::make_unique<FrankaRobotStatus>();
-    Value output_value;
-    std::string method = "ExecutionStatus";
-    std::vector<std::string> path = kExecutionControlPath;
-    auto error_status = std::make_unique<FrankaRobotStatus>();
+  auto robotStatus = std::make_unique<FrankaRobotStatus>();
+  Value output_value;
+  std::string method = "ExecutionStatus";
+  std::vector<std::string> path = kExecutionControlPath;
+  auto error_status = std::make_unique<FrankaRobotStatus>();
 
-    error_status->error_message="Struttura di default. Errore nella lettura dei dati sullo stato.";
-    error_status->has_error=true;
+  error_status->error_message = "Struttura di default. Errore nella lettura dei dati sullo stato.";
+  error_status->has_error = true;
 
-    path.push_back(method);
+  path.push_back(method);
 
-    bool success = client_->readValue(path, output_value);
+  bool success = client_->readValue(path, output_value);
 
-    if (success)
-    {
-        if(output_value.is<Value::Struct>()){
+  if (success) {
+    if (output_value.is<Value::Struct>()) {
 
-            Value::Struct fields = output_value.as<Value::Struct>();
+      Value::Struct fields = output_value.as<Value::Struct>();
 
-            robotStatus->has_error =  extractField(fields, "HasError", false);
-            robotStatus->is_running = extractField(fields, "IsRunning", false);
-            robotStatus->error_message = extractField(fields, "ErrorMessage", std::string(""));
-            robotStatus->active_task_name = extractField(fields, "ActiveTaskName", std::string(""));
-            robotStatus->active_task_id = extractField(fields, "ActiveTaskId", std::string(""));
-           
-            return robotStatus;
-            
-        } else return error_status;
+      robotStatus->has_error = extractField(fields, "HasError", false);
+      robotStatus->is_running = extractField(fields, "IsRunning", false);
+      robotStatus->error_message = extractField(fields, "ErrorMessage", std::string(""));
+      robotStatus->active_task_name = extractField(fields, "ActiveTaskName", std::string(""));
+      robotStatus->active_task_id = extractField(fields, "ActiveTaskId", std::string(""));
 
-    } else return error_status;
+      return robotStatus;
+
+    } else {return error_status;}
+
+  } else {return error_status;}
 
 }
 
 
 //Legge in radianti la rotazione di ogni giunto del braccio, non end-effector
-std::vector<double> FrankaRobot::readJointAngles(){
+std::vector<double> FrankaRobot::readJointAngles()
+{
 
-    Value jointAngles;
-    std::vector<std::string> path = kExecutionControlPath;
-    std::string method = "JointAngles";
+  Value jointAngles;
+  std::vector<std::string> path = kExecutionControlPath;
+  std::string method = "JointAngles";
 
-    path.push_back(method);
-    
-    bool success = client_->readValue(path, jointAngles);
+  path.push_back(method);
 
-    if (success && jointAngles.is<std::vector<double>>()){
+  bool success = client_->readValue(path, jointAngles);
 
-        return jointAngles.as<std::vector<double>>();
-    
-    } else return {}; //Ritorna il vettore vuoto
+  if (success && jointAngles.is<std::vector<double>>()) {
+
+    return jointAngles.as<std::vector<double>>();
+
+  } else {return {};}  //Ritorna il vettore vuoto
 
 }
 
 //Legge lo stato cartesiano dell'end-effector (la pinza)
- geometry_msgs::msg::Pose FrankaRobot::readCartesianPose(){
+geometry_msgs::msg::Pose FrankaRobot::readCartesianPose()
+{
 
-    Value output_value;
-    std::vector<std::string> path = kExecutionControlPath;
-    std::string method = "CartesianPose";
-    Eigen::Matrix4d matrix;
-    geometry_msgs::msg::Pose pose;
-    geometry_msgs::msg::Pose fallback;
-    fallback.orientation.w = 1.0;
-    
-    path.push_back(method);
+  Value output_value;
+  std::vector<std::string> path = kExecutionControlPath;
+  std::string method = "CartesianPose";
+  Eigen::Matrix4d matrix;
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Pose fallback;
+  fallback.orientation.w = 1.0;
 
-    bool success = client_->readValue(path, output_value);
+  path.push_back(method);
 
-    if(success && output_value.is<std::vector<double>>() && output_value.as<std::vector<double>>().size() == 16){
+  bool success = client_->readValue(path, output_value);
 
-        const std::vector<double>& values = output_value.as<std::vector<double>>();
-        
-        //16 double restituiti da Franka server in ordine column-major (quello che ci serve per Eigen)
-        
-        matrix = Eigen::Map<Eigen::Matrix4d>(values.data()); //values.data(): puntatore al primo elemento dei double.
+  if (success && output_value.is<std::vector<double>>() &&
+    output_value.as<std::vector<double>>().size() == 16)
+  {
 
-        //Estrazione della matrice di rotazione 3x3
-        const Eigen::Matrix3d rotation = matrix.block<3, 3>(0,0);
+    const std::vector<double> & values = output_value.as<std::vector<double>>();
 
-        //Conversione della matrice di rotazione in quaternione
+    //16 double restituiti da Franka server in ordine column-major (quello che ci serve per Eigen)
 
-        Eigen::Quaterniond quaternion(rotation); 
+    matrix = Eigen::Map<const Eigen::Matrix4d>(values.data());     //values.data(): puntatore al primo elemento dei double.
 
-        // Posizione
-        pose.position.x = matrix(0, 3);
-        pose.position.y = matrix(1, 3);
-        pose.position.z = matrix(2, 3);
+    //Estrazione della matrice di rotazione 3x3
+    const Eigen::Matrix3d rotation = matrix.block<3, 3>(0, 0);
 
-        // Orientamento
-        pose.orientation.x = quaternion.x();
-        pose.orientation.y = quaternion.y();
-        pose.orientation.z = quaternion.z();
-        pose.orientation.w = quaternion.w();
+    //Conversione della matrice di rotazione in quaternione
 
-        return pose;
-        
-    }
+    Eigen::Quaterniond quaternion(rotation);
 
-    return fallback; 
+    // Posizione
+    pose.position.x = matrix(0, 3);
+    pose.position.y = matrix(1, 3);
+    pose.position.z = matrix(2, 3);
+
+    // Orientamento
+    pose.orientation.x = quaternion.x();
+    pose.orientation.y = quaternion.y();
+    pose.orientation.z = quaternion.z();
+    pose.orientation.w = quaternion.w();
+
+    return pose;
+
+  }
+
+  return fallback;
 
 
- }
+}
 
 bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
 {

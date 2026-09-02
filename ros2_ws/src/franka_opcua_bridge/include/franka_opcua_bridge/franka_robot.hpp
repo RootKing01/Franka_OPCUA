@@ -51,7 +51,7 @@ public:
   geometry_msgs::msg::Pose readCartesianPose() override;
 
   template<typename T>
-  T FrankaRobot::extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
+  T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
 
 protected:
   std::unique_ptr<IProtocolClient> client_;
