@@ -25,6 +25,7 @@ public:
 
   virtual bool connect() = 0;
   virtual void disconnect() = 0;
+  virtual bool isConnected() const = 0;
 
   virtual bool requestControl() = 0;
   virtual bool releaseControl() = 0;
@@ -37,7 +38,7 @@ public:
   virtual bool moveToNamedPose(const std::string & pose_id) = 0;
 
   virtual std::unique_ptr<RobotStatus> readStatus() = 0;
-  
+
   virtual std::vector<double> readJointAngles() = 0;
   virtual geometry_msgs::msg::Pose readCartesianPose() = 0;
 

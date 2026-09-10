@@ -5,6 +5,7 @@ namespace franka_opcua_bridge
 
 bool FakeRobot::connect() {connected_ = true; return true;}
 void FakeRobot::disconnect() {connected_ = false;}
+bool FakeRobot::isConnected()const {return connected_;}
 bool FakeRobot::requestControl() {return connected_;}
 bool FakeRobot::releaseControl() {return true;}
 

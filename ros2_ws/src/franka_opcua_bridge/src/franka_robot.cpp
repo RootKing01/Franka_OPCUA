@@ -12,7 +12,7 @@ const std::vector<std::string> kPoseMapPath = {"Robot", "KeyValueMaps"};
 
 
 FrankaRobot::FrankaRobot(
-  std::unique_ptr<IProtocolClient> client,
+  std::unique_ptr<IOpcUaProtocolClient> client,
   std::string endpoint,
   std::string user,
   std::string password) :
@@ -33,6 +33,12 @@ void FrankaRobot::disconnect()
 {
 
   return client_->disconnect();
+}
+
+bool FrankaRobot::isConnected() const{
+
+  return client_->isConnected();
+
 }
 
 bool FrankaRobot::openBrakes()

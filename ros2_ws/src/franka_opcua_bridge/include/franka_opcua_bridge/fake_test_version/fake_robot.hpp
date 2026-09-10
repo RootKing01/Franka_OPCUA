@@ -11,7 +11,7 @@ class FakeRobot : public IRobot
 public:
   bool connect() override;
   void disconnect() override;
-  bool isConnected() const {return connected_;}
+  bool isConnected() const override;
   bool requestControl() override;
   bool releaseControl() override;
   bool openBrakes() override;
