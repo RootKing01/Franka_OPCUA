@@ -57,10 +57,6 @@ struct CallResult
 };
 
 // Interfaccia astratta per un client di un protocollo di comunicazione
-// industriale generico (OPC UA, ma potenzialmente altro in futuro).
-// Non conosce nulla di "robot", "Franka", "freni" - solo concetti
-// di comunicazione: connessione, nodi identificati per percorso,
-// chiamata di metodi, lettura/scrittura di variabili.
 
 class IProtocolClient
 {
