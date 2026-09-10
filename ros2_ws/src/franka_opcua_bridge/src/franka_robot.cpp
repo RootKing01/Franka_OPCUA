@@ -35,7 +35,8 @@ void FrankaRobot::disconnect()
   return client_->disconnect();
 }
 
-bool FrankaRobot::isConnected() const{
+bool FrankaRobot::isConnected() const
+{
 
   return client_->isConnected();
 

@@ -55,7 +55,7 @@ public:
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
 
 protected:
-  std::unique_ptr<IProtocolClient> client_;
+  std::unique_ptr<IOpcUaProtocolClient> client_;
 
 private:
   static const std::vector<std::string> kExecutionControlPath;

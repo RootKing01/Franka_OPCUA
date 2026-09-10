@@ -42,8 +42,8 @@ public:
   virtual std::vector<double> readJointAngles() = 0;
   virtual geometry_msgs::msg::Pose readCartesianPose() = 0;
 
-  virtual std::vector<double> readTorque() = 0;
-  virtual geometry_msg::msg::Pose readWrench() = 0;
+  //virtual std::vector<double> readTorque() = 0;
+  //virtual geometry_msg::msgs::Pose readWrench() = 0;
 
 protected:
   IRobot() = default;
