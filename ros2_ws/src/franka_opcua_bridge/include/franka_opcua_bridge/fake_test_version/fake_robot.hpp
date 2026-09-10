@@ -11,10 +11,12 @@ class FakeRobot : public IRobot
 public:
   bool connect() override;
   void disconnect() override;
+  bool isConnected() const {return connected_;}
   bool requestControl() override;
   bool releaseControl() override;
   bool openBrakes() override;
   bool closeBrakes() override;
+  bool areBrakesOpen() const {return brakes_open_;}
   bool stop() override;
   bool executeNamedTask(const std::string & task_id) override;
   bool moveToNamedPose(const std::string & pose_id) override;
@@ -24,8 +26,6 @@ public:
 
   // Metodi di ispezione per i test: non fanno parte di IRobot,
   // servono solo a verificare cosa e' successo dentro FakeRobot
-  bool isConnected() const {return connected_;}
-  bool areBrakesOpen() const {return brakes_open_;}
   std::string lastTaskExecuted() const {return last_task_;}
   std::string lastPoseTarget() const {return last_pose_;}
 

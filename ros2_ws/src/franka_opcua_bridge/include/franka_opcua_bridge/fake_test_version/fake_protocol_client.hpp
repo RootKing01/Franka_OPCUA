@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "franka_opcua_bridge/i_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_protocol_client.hpp"
 
 namespace franka_opcua_bridge
 {
@@ -17,7 +17,7 @@ struct CallRecord
   std::vector<Value> args;
 };
 
-class FakeProtocolClient : public IProtocolClient
+class FakeProtocolClient : public IOpcUaProtocolClient
 {
 
 public:

@@ -74,24 +74,8 @@ public:
 
   virtual bool isConnected() const = 0;
 
-
-  //browse_path: es: {{"Robot", "ExecutionControl"}, "OpenBrakes"}
-  virtual CallResult callMethod(
-    const std::vector<std::string> & object_browse_path,
-    const std::string & method_name,
-    const std::vector<Value> & args) = 0;
-
-  virtual bool readValue(
-    const std::vector<std::string> & variable_browse_path,
-    Value & out_value) = 0;
-
-  virtual bool writeValue(
-    const std::vector<std::string> & variable_browse_path,
-    const Value & out_value) = 0;
-
 protected:
   IProtocolClient() = default;
-
 
 };
 

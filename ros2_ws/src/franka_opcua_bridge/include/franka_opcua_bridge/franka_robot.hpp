@@ -8,7 +8,7 @@
 
 
 #include "franka_opcua_bridge/i_robot.hpp"
-#include "franka_opcua_bridge/i_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_protocol_client.hpp"
 
 namespace franka_opcua_bridge
 {
@@ -25,7 +25,7 @@ class FrankaRobot : public IRobot
 
 public:
   explicit FrankaRobot(
-    std::unique_ptr<IProtocolClient> client,
+    std::unique_ptr<IOpcUaProtocolClient> client,
     std::string endpoint,
     std::string user,
     std::string password);
