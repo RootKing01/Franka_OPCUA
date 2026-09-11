@@ -51,6 +51,9 @@ public:
   std::vector<double> readJointAngles() override;
   geometry_msgs::msg::Pose readCartesianPose() override;
 
+  std::vector<double> readTorque() override;
+  geometry_msg::msgs::Wrench readWrench() override;
+
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
 

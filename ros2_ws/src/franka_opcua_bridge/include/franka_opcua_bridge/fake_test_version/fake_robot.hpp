@@ -29,6 +29,9 @@ public:
   std::string lastTaskExecuted() const {return last_task_;}
   std::string lastPoseTarget() const {return last_pose_;}
 
+  std::vector<double> readTorque() override;
+  geometry_msg::msgs::Wrench readWrench() override;
+
 private:
   bool connected_ = false;
   bool brakes_open_ = false;

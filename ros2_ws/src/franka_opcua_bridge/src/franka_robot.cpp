@@ -272,6 +272,56 @@ geometry_msgs::msg::Pose FrankaRobot::readCartesianPose()
 
 }
 
+std::vector<double> readTorque(){
+
+  std::vector<std::string> path = kExecutionControlPath;
+  std::string method = "EstimatedTorques";
+  Value output_value;
+
+  path.push_back(method);
+
+  bool success = client_->readValue(path, output_value);
+
+  if (success && output_value.is<std::vector<double>>()) return output_value.as<std::vector<double>>();
+
+
+  return {};
+
+
+}
+
+geometry_msgs::msg::Wrench readWrench(){
+
+  Value output_value;
+  std::vector<std::string> path =  kExecutionControlPath;
+  std::string method = "EstimatedForces";
+
+  geometry_msgs::msg::Wrench wrench;
+  geometry_msgs::msg::Wrench fallback_wrench;
+  
+
+  path.push_back(method);
+
+  bool success = client_->readValue(path, output_value);
+
+  if(success && output_value.is<std::vector<double>>() && output_value.as<std::vector<double>>().size() == 6){
+
+    auto estimatedForce = output_value.as<std::vector<double>>();
+    
+    wrench.force.x = estimatedForce[0];
+    wrench.force.y = estimatedForce[1];
+    wrench.force.z = estimatedForce[2];
+
+    wrench.torque.x = estimatedForce[3];
+    wrench.torque.y = estimatedForce[4];
+    wrench.torque.z = estimatedForce[5];
+
+    return wrench;
+
+  } else return fallback_wrench;
+
+}
+
 bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
 {
   std::vector<std::string> pathKeyPose = kPoseMapPath;

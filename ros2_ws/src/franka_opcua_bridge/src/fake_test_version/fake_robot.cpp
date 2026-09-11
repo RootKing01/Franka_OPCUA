@@ -52,6 +52,27 @@ std::vector<double> FakeRobot::readJointAngles()
   return {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};
 }
 
+std::vector<double> FakeRobot::readTorque(){
+
+  return {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};
+}
+
+geometry_msgs::msg::Wrench FakeRobot::readWrench(){
+
+  geometry_msgs::msg::Wrench wrench;
+
+  wrench.force.x = 0.0;
+  wrench.force.y = 0.785;
+  wrench.force.z = 1.0;
+
+  wrench.torque.x = 0.0;
+  wrench.torque.y = 1.0;
+  wrench.torque.z = 0.0;
+
+  return wrench;
+
+}
+
 geometry_msgs::msg::Pose FakeRobot::readCartesianPose()
 {
   geometry_msgs::msg::Pose pose;

@@ -38,6 +38,41 @@ TEST(FakeRobotTest, TaskSucceedsIfBrakesOpen)
   EXPECT_EQ(status->active_task_name, "some_task");
 }
 
+TEST(FakeRobotTest, ReadTorque)
+{
+  FakeRobot robot;
+  robot.connect();
+
+  auto torque = robot.readTorque();
+
+  ASSERT_EQ(torque.size(), 7);
+
+  EXPECT_DOUBLE_EQ(torque[0], 0.0);
+  EXPECT_DOUBLE_EQ(torque[1], -0.785);
+  EXPECT_DOUBLE_EQ(torque[2], 0.0);
+  EXPECT_DOUBLE_EQ(torque[3], -2.356);
+  EXPECT_DOUBLE_EQ(torque[4], 0.0);
+  EXPECT_DOUBLE_EQ(torque[5], 1.571);
+  EXPECT_DOUBLE_EQ(torque[6], 0.785);
+}
+
+
+TEST(FakeRobotTest, ReadWrench)
+{
+  FakeRobot robot;
+  robot.connect();
+  
+  auto wrench = robot.readWrench();
+
+  EXPECT_DOUBLE_EQ(wrench.force.x, 0.0);
+  EXPECT_DOUBLE_EQ(wrench.force.y, 0.785);
+  EXPECT_DOUBLE_EQ(wrench.force.z, 1.0);
+
+  EXPECT_DOUBLE_EQ(wrench.torque.x, 0.0);
+  EXPECT_DOUBLE_EQ(wrench.torque.y, 1.0);
+  EXPECT_DOUBLE_EQ(wrench.torque.z, 0.0);
+}
+
 TEST(FakeRobotTest, MoveToNamedPoseUpdatesStatus)
 {
   FakeRobot robot;
