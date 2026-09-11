@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include "geometry_msgs/msg/pose.hpp"
+#include <geometry_msgs/msg/wrench.hpp>
 
 namespace franka_opcua_bridge
 {
@@ -43,7 +44,7 @@ public:
   virtual geometry_msgs::msg::Pose readCartesianPose() = 0;
 
   virtual std::vector<double> readTorque() = 0;
-  virtual geometry_msg::msgs::Wrench readWrench() = 0;
+  virtual geometry_msgs::msg::Wrench readWrench() = 0;
 
 protected:
   IRobot() = default;

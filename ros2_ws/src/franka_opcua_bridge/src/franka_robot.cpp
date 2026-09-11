@@ -272,7 +272,8 @@ geometry_msgs::msg::Pose FrankaRobot::readCartesianPose()
 
 }
 
-std::vector<double> readTorque(){
+std::vector<double> FrankaRobot::readTorque()
+{
 
   std::vector<std::string> path = kExecutionControlPath;
   std::string method = "EstimatedTorques";
@@ -282,7 +283,9 @@ std::vector<double> readTorque(){
 
   bool success = client_->readValue(path, output_value);
 
-  if (success && output_value.is<std::vector<double>>()) return output_value.as<std::vector<double>>();
+  if (success && output_value.is<std::vector<double>>()) {
+    return output_value.as<std::vector<double>>();
+  }
 
 
   return {};
@@ -290,24 +293,27 @@ std::vector<double> readTorque(){
 
 }
 
-geometry_msgs::msg::Wrench readWrench(){
+geometry_msgs::msg::Wrench FrankaRobot::readWrench()
+{
 
   Value output_value;
-  std::vector<std::string> path =  kExecutionControlPath;
+  std::vector<std::string> path = kExecutionControlPath;
   std::string method = "EstimatedForces";
 
   geometry_msgs::msg::Wrench wrench;
   geometry_msgs::msg::Wrench fallback_wrench;
-  
+
 
   path.push_back(method);
 
   bool success = client_->readValue(path, output_value);
 
-  if(success && output_value.is<std::vector<double>>() && output_value.as<std::vector<double>>().size() == 6){
+  if (success && output_value.is<std::vector<double>>() &&
+    output_value.as<std::vector<double>>().size() == 6)
+  {
 
     auto estimatedForce = output_value.as<std::vector<double>>();
-    
+
     wrench.force.x = estimatedForce[0];
     wrench.force.y = estimatedForce[1];
     wrench.force.z = estimatedForce[2];
@@ -318,7 +324,7 @@ geometry_msgs::msg::Wrench readWrench(){
 
     return wrench;
 
-  } else return fallback_wrench;
+  } else {return fallback_wrench;}
 
 }
 

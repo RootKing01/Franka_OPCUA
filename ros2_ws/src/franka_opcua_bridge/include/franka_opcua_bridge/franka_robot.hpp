@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include "geometry_msgs/msg/pose.hpp"
-
+#include <geometry_msgs/msg/wrench.hpp>
 
 #include "franka_opcua_bridge/i_robot.hpp"
 #include "franka_opcua_bridge/opcua_protocol_client.hpp"
@@ -52,7 +52,7 @@ public:
   geometry_msgs::msg::Pose readCartesianPose() override;
 
   std::vector<double> readTorque() override;
-  geometry_msg::msgs::Wrench readWrench() override;
+  geometry_msgs::msg::Wrench readWrench() override;
 
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);

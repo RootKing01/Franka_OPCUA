@@ -61,7 +61,7 @@ TEST(FakeRobotTest, ReadWrench)
 {
   FakeRobot robot;
   robot.connect();
-  
+
   auto wrench = robot.readWrench();
 
   EXPECT_DOUBLE_EQ(wrench.force.x, 0.0);

@@ -272,6 +272,69 @@ TEST(FrankaRobotTest, executeNamedPoseCallsCorrectMethod) {
 
 }
 
+TEST(FrankaRobotTest, ReadTorqueCall) {
+
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  std::vector<std::string> path = {"Robot", "ExecutionControl", "EstimatedTorques"};
+  std::vector<double> torque;
+
+  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+  bool success = robot.connect();
+  ASSERT_TRUE(success);
+
+  fake_ptr->writeValue(
+    path, Value(
+      std::vector<double>(
+        {1.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0})) );
+
+
+  torque = robot.readTorque();
+  ASSERT_EQ(torque.size(), 7);
+
+
+  EXPECT_EQ(torque[0], 1.0);
+  EXPECT_EQ(torque[1], 1.0);
+  EXPECT_EQ(torque[2], 2.0);
+  EXPECT_EQ(torque[3], 3.0);
+  EXPECT_EQ(torque[4], 5.0);
+  EXPECT_EQ(torque[5], 8.0);
+  EXPECT_EQ(torque[6], 13.0);
+
+
+}
+
+TEST(FrankaRobotTest, ReadWrenchCall) {
+
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  std::vector<std::string> path = {"Robot", "ExecutionControl", "EstimatedForces"};
+  geometry_msgs::msg::Wrench wrench;
+
+  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+
+  bool success = robot.connect();
+  ASSERT_TRUE(success);
+
+  fake_ptr->writeValue(
+    path, Value(
+      std::vector<double>(
+        {1.0, 1.0, 2.0, 3.0, 5.0, 8.0})) );
+
+
+  wrench = robot.readWrench();
+
+  EXPECT_EQ(wrench.force.x, 1.0);
+  EXPECT_EQ(wrench.force.y, 1.0);
+  EXPECT_EQ(wrench.force.z, 2.0);
+  EXPECT_EQ(wrench.torque.x, 3.0);
+  EXPECT_EQ(wrench.torque.y, 5.0);
+  EXPECT_EQ(wrench.torque.z, 8.0);
+
+}
+
+
 TEST(FrankaRobotTest, MoveToNamedPoseCall) {
 
   auto fake_client = std::make_unique<FakeProtocolClient>();

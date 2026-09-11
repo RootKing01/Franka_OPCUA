@@ -30,7 +30,7 @@ public:
   std::string lastPoseTarget() const {return last_pose_;}
 
   std::vector<double> readTorque() override;
-  geometry_msg::msgs::Wrench readWrench() override;
+  geometry_msgs::msg::Wrench readWrench() override;
 
 private:
   bool connected_ = false;
