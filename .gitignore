@@ -18,3 +18,6 @@ log/
 
 # Editor
 .vscode/
+
+#file env per dati login
+**/.env

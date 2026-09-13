@@ -4,6 +4,10 @@ services:
       context: ./dev
       dockerfile: Dockerfile
     container_name: franka_dev
+    environment:
+      - FRANKA_ENDPOINT=${FRANKA_ENDPOINT}
+      - FRANKA_USER=${FRANKA_USER}
+      - FRANKA_PASS=${FRANKA_PASS}
     volumes:
       - ../ros2_ws:/root/ros2_ws
     stdin_open: true
