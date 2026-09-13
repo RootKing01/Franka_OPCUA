@@ -12,6 +12,7 @@ TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
 
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();
+  bool force = true;
 
   FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
 
@@ -20,7 +21,7 @@ TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
 
   fake_ptr->writeValue({"Robot", "ExecutionControl", "ControlTokenActive"}, Value(true));
 
-  bool result = robot.requestControl();
+  bool result = robot.requestControl(force);
   EXPECT_TRUE(result);
 
   const auto & log = fake_ptr->callLog();

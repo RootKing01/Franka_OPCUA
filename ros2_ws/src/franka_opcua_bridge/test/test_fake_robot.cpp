@@ -2,7 +2,7 @@
 #include "franka_opcua_bridge/fake_test_version/fake_robot.hpp"
 
 using franka_opcua_bridge::FakeRobot;
-using franka_opcua_bridge::IRobot;
+using franka_opcua_bridge::IFranka;
 
 TEST(FakeRobotTest, ConnectSetsConnectedState)
 {
@@ -84,7 +84,7 @@ TEST(FakeRobotTest, MoveToNamedPoseUpdatesStatus)
 
 TEST(FakeRobotTest, WorksThroughAbstractInterface)
 {
-  std::unique_ptr<IRobot> robot = std::make_unique<FakeRobot>();
+  std::unique_ptr<IFranka> robot = std::make_unique<FakeRobot>();
   EXPECT_TRUE(robot->connect());
   EXPECT_TRUE(robot->openBrakes());
   EXPECT_TRUE(robot->executeNamedTask("test_task"));

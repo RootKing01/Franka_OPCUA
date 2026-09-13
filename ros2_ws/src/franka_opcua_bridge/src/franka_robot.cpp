@@ -79,15 +79,16 @@ bool FrankaRobot::stop()
 }
 
 
-bool FrankaRobot::requestControl()
+bool FrankaRobot::requestControl(bool force)
 {
 
   Value out_value;
   std::vector<std::string> browse_path = kExecutionControlPath;
   std::string method = "ControlTokenActive";
 
-  CallResult result = client_->callMethod(kExecutionControlPath, "RequestControlToken", {});
-
+  CallResult result = client_->callMethod(
+    kExecutionControlPath, "RequestControlToken", {Value(
+        force)});
   if (result.ok == false) {return false;}
 
   browse_path.push_back(method);

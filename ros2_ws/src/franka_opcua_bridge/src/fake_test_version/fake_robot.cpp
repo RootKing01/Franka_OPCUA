@@ -6,7 +6,7 @@ namespace franka_opcua_bridge
 bool FakeRobot::connect() {connected_ = true; return true;}
 void FakeRobot::disconnect() {connected_ = false;}
 bool FakeRobot::isConnected()const {return connected_;}
-bool FakeRobot::requestControl() {return connected_;}
+bool FakeRobot::requestControl(bool force) {return connected_;} //Da ricontrollare questa serie di controlli
 bool FakeRobot::releaseControl() {return true;}
 
 bool FakeRobot::openBrakes()

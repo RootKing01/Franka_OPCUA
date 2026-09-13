@@ -28,15 +28,10 @@ public:
   virtual void disconnect() = 0;
   virtual bool isConnected() const = 0;
 
-  virtual bool requestControl() = 0;
-  virtual bool releaseControl() = 0;
 
   virtual bool openBrakes() = 0;
   virtual bool closeBrakes() = 0;
-  virtual bool stop() = 0;
-
-  virtual bool executeNamedTask(const std::string & task_id) = 0;
-  virtual bool moveToNamedPose(const std::string & pose_id) = 0;
+  virtual bool areBrakesOpen() = 0;
 
   virtual std::unique_ptr<RobotStatus> readStatus() = 0;
 

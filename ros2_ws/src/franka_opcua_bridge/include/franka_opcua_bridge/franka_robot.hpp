@@ -7,8 +7,8 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include <geometry_msgs/msg/wrench.hpp>
 
-#include "franka_opcua_bridge/i_robot.hpp"
-#include "franka_opcua_bridge/opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/i_franka.hpp"
+#include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
 
 namespace franka_opcua_bridge
 {
@@ -20,7 +20,7 @@ struct FrankaRobotStatus : public RobotStatus
 
 };
 
-class FrankaRobot : public IRobot
+class FrankaRobot : public IFranka
 {
 
 public:
@@ -34,12 +34,12 @@ public:
   void disconnect() override;
   bool isConnected() const override;
 
-  bool requestControl() override;
+  bool requestControl(bool force) override;
   bool releaseControl() override;
 
   bool openBrakes() override;
   bool closeBrakes() override;
-  bool areBrakesOpen();
+  bool areBrakesOpen() override;
 
   bool stop() override;
 
@@ -59,6 +59,7 @@ public:
 
 protected:
   std::unique_ptr<IOpcUaProtocolClient> client_;
+  bool force_ = false;
 
 private:
   static const std::vector<std::string> kExecutionControlPath;

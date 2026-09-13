@@ -1,22 +1,22 @@
 #ifndef FRANKA_OPCUA_BRIDGE__FAKE_ROBOT_HPP_
 #define FRANKA_OPCUA_BRIDGE__FAKE_ROBOT_HPP_
 
-#include "franka_opcua_bridge/i_robot.hpp"
+#include "franka_opcua_bridge/i_franka.hpp"
 
 namespace franka_opcua_bridge
 {
 
-class FakeRobot : public IRobot
+class FakeRobot : public IFranka
 {
 public:
   bool connect() override;
   void disconnect() override;
   bool isConnected() const override;
-  bool requestControl() override;
+  bool requestControl(bool force) override;
   bool releaseControl() override;
   bool openBrakes() override;
   bool closeBrakes() override;
-  bool areBrakesOpen() const {return brakes_open_;}
+  bool areBrakesOpen() {return brakes_open_;}
   bool stop() override;
   bool executeNamedTask(const std::string & task_id) override;
   bool moveToNamedPose(const std::string & pose_id) override;
