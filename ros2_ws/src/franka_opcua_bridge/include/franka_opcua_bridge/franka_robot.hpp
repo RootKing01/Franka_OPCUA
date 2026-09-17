@@ -24,14 +24,10 @@ class FrankaRobot : public IFranka
 {
 
 public:
-  explicit FrankaRobot(
-    std::unique_ptr<IOpcUaProtocolClient> client,
-    std::string endpoint,
-    std::string user,
-    std::string password);
+  explicit FrankaRobot(std::unique_ptr<IOpcUaProtocolClient> client);
 
   bool connect() override;
-  void disconnect() override;
+  bool disconnect() override;
   bool isConnected() const override;
 
   bool requestControl(bool force) override;
@@ -63,10 +59,6 @@ protected:
 
 private:
   static const std::vector<std::string> kExecutionControlPath;
-  std::string endpoint_;
-  std::string user_;
-  std::string password_;
-
 
 };
 

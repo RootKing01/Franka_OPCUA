@@ -15,10 +15,24 @@ find_package(Eigen3 REQUIRED)
 
 include_directories(include)
 
-add_executable(franka_bridge_node src/franka_bridge_node.cpp)
+add_executable(franka_bridge_node src/franka_bridge_node.cpp src/opcua_client.cpp)
+
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
 
 
+find_package(open62541 REQUIRED)
+ua_generate_datatypes(
+  NAME "opc_ua_service_types"
+  TARGET_SUFFIX "opc-ua-service-types"
+  FILE_CSV "${CMAKE_CURRENT_SOURCE_DIR}/type_generate/opc_ua_service.csv"
+  FILES_BSD "${CMAKE_CURRENT_SOURCE_DIR}/type_generate/opc_ua_service_types.bsd"
+  NAMESPACE_MAP "2:http://franka.de/opcua/"
+)
+
+ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
+target_link_libraries(franka_bridge_node open62541::open62541)
+add_dependencies(franka_bridge_node open62541-generator-opc-ua-service-types)
+target_include_directories(franka_bridge_node PRIVATE ${PROJECT_BINARY_DIR}/src_generated/open62541)
 
 install(TARGETS
   franka_bridge_node

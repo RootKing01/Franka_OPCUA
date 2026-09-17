@@ -10,6 +10,8 @@ class IOpcUaProtocolClient : public IProtocolClient
 {
 
 public:
+  virtual ~IOpcUaProtocolClient() = default;
+
   //browse_path: es: {{"Robot", "ExecutionControl"}, "OpenBrakes"}
   virtual CallResult callMethod(
 

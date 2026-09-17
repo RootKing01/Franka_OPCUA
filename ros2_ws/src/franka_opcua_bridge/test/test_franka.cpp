@@ -14,7 +14,7 @@ TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
   FakeProtocolClient * fake_ptr = fake_client.get();
   bool force = true;
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -36,7 +36,7 @@ TEST(FrankaRobotTest, releaseControlCallsCorrectMethod) {
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -58,7 +58,7 @@ TEST(FrankaRobotTest, OpenBrakesCallsCorrectMethod)
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();   // puntatore raw, solo per ispezione
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
 
@@ -80,7 +80,7 @@ TEST(FrankaRobotTest, CloseBrakesCallsCorrectMethod) {
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();   //puntatore di ispezione
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
 
@@ -103,7 +103,7 @@ TEST(FrankaRobotTest, AreBrakesOpenReturnsBrakeState) {
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -122,7 +122,7 @@ TEST(FrankaRobotTest, AreBrakesOpenReturnsFalse) {
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -140,7 +140,7 @@ TEST(FrankaRobotTest, stopCallsCorrectMethod) {
   auto fake_client = std::make_unique<FakeProtocolClient>();
   FakeProtocolClient * fake_ptr = fake_client.get();
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -162,7 +162,7 @@ TEST(FrankaRobotTest, readJointAnglesCallCorrectMethod) {
   std::vector<double> angles_ = {1.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0};
   std::vector<double> output_;
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -179,7 +179,7 @@ TEST(FrankaRobotTest, ReadJointAnglesReturnsEmptyIfNotSet)
 {
   auto fake_client = std::make_unique<FakeProtocolClient>();
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
   robot.connect();
 
   std::vector<double> output_ = robot.readJointAngles();
@@ -195,7 +195,7 @@ TEST(FrankaRobotTest, ReadCartesianPoseCallsCorrectMethod) {
   std::vector<double> matrix_ = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
   geometry_msgs::msg::Pose pose_;
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -221,7 +221,7 @@ TEST(FrankaRobotTest, ReadStatuCallsCorrectMethod) {
   FakeProtocolClient * fake_ptr = fake_client.get();
   std::vector<std::string> path_ = {"Robot", "ExecutionControl", "ExecutionStatus"};
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -256,7 +256,7 @@ TEST(FrankaRobotTest, executeNamedPoseCallsCorrectMethod) {
   FakeProtocolClient * fake_ptr = fake_client.get();
   const std::string task_id = "opcua_goto";
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -280,7 +280,7 @@ TEST(FrankaRobotTest, ReadTorqueCall) {
   std::vector<std::string> path = {"Robot", "ExecutionControl", "EstimatedTorques"};
   std::vector<double> torque;
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -313,7 +313,7 @@ TEST(FrankaRobotTest, ReadWrenchCall) {
   std::vector<std::string> path = {"Robot", "ExecutionControl", "EstimatedForces"};
   geometry_msgs::msg::Wrench wrench;
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -345,7 +345,7 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
 
   variable_browse_path.push_back(pose_id);
 
-  FrankaRobot robot(std::move(fake_client), "endpoint", "user", "pass");
+  FrankaRobot robot(std::move(fake_client));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);

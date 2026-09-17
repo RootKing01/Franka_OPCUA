@@ -1,18 +1,153 @@
 #include "franka_opcua_bridge/opcua_client.hpp"
-#include <open62541/ua_client.h>
-#include <open62541/ua_config_default.h>
-#include <open62541/ua_client_highlevel.h>
-#include <open62541/ua_log_stdout.h>
+#include <open62541/client.h>
+#include <open62541/client_config_default.h>
+#include <open62541/client_highlevel.h>
+#include <open62541/plugin/log_stdout.h>
 
 #include <opc_ua_service_types_generated.h>
 
 #include <string>
 #include <vector>
-
+#include <iostream>
 #include <stdlib.h>
+#include <cstdlib>
 
 namespace franka_opcua_bridge
 {
+
+bool OpcuaClient::setEndpointAndUser(std::string endpoint, std::string user)
+{
+
+  //Punto da controllare: se char * occupa un'aria di memoria troppo grande per string?
+  //E' possibile che possa rappresentare un'area di memoria troppo grande? .c_str() esegue questo tipo di controlli?
+
+  char * env_endpoint = getenv(endpoint.c_str());
+
+  if (env_endpoint == nullptr) {
+
+    std::cout << "Errore nella lettura dell'endpoint.";
+
+    return false;
+  }
+
+  endpoint_ = std::string(env_endpoint);
+
+  char * env_user = getenv(user.c_str());
+
+  if (env_user == nullptr) {
+
+    std::cout << "Errore nella lettura dello username.";
+
+    return false;
+  }
+
+  user_ = std::string(env_user);
+
+  std::cout << "Endpoint ed username inizializzati correttamente dalle variabili d'ambiente.";
+  return true;
+
+}
+
+bool OpcuaClient::connect()
+{
+
+  char * env_password = nullptr;
+
+  bool setted = setEndpointAndUser("FRANKA_ENDPOINT", "FRANKA_USER");
+
+  if (!setted) {return false;}
+
+
+  //Alloca il client
+  client_ = UA_Client_new();
+
+  //configurazione timeout/buffer di default
+  UA_ClientConfig_setDefault(UA_Client_getConfig(client_));
+
+  env_password = getenv("FRANKA_PASS");
+
+  if (env_password == nullptr) {
+    std::cout << "Errore nel recupero della password da variabile d'ambiente.";
+    UA_Client_delete(client_);
+    return false;
+  }
+
+  UA_StatusCode success = UA_Client_connectUsername(
+    client_, endpoint_.c_str(),
+    user_.c_str(), env_password);
+
+  //Pulizia passsword
+  explicit_bzero(env_password, strlen(env_password));
+
+  if (success != UA_STATUSCODE_GOOD) {
+
+    UA_Client_delete(client_);
+    return false;
+
+  }
+
+  return true;
+
+}
+
+
+bool OpcuaClient::disconnect()
+{
+
+  if (client_ == nullptr) {return true;}
+
+  UA_Client_disconnect(client_);
+  UA_Client_delete(client_);
+
+  client_ = nullptr;
+
+  return true;
+}
+
+bool OpcuaClient::isConnected() const
+{
+  return client_ != nullptr;
+}
+
+CallResult OpcuaClient::callMethod(
+  const std::vector<std::string> & object_browse_path,
+  const std::string & method_name,
+  const std::vector<Value> & args)
+{
+  (void)object_browse_path;
+  (void)method_name;
+  (void)args;
+  // TODO: non ancora implementato
+  return CallResult{};
+}
+
+bool OpcuaClient::readValue(
+  const std::vector<std::string> & variable_browse_path,
+  Value & out_value)
+{
+  (void)variable_browse_path;
+  (void)out_value;
+  // TODO: non ancora implementato
+  return false;
+}
+
+bool OpcuaClient::writeValue(
+  const std::vector<std::string> & variable_browse_path,
+  const Value & out_value)
+{
+  (void)variable_browse_path;
+  (void)out_value;
+  // TODO: non ancora implementato
+  return false;
+}
+
+OpcuaClient::~OpcuaClient()
+{
+  disconnect();
+}
+
+
+/* Code from Franka Emika OPC UA Service 7.0.1 - Simple C++ Client
 
 UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path)
 {
@@ -114,5 +249,8 @@ UA_Int32 readKeyIntPair(UA_Client * client, std::string key)
 
   return value;
 }
+
+*/
+
 
 }

@@ -25,7 +25,7 @@ public:
   virtual ~IRobot() = default;
 
   virtual bool connect() = 0;
-  virtual void disconnect() = 0;
+  virtual bool disconnect() = 0;
   virtual bool isConnected() const = 0;
 
 

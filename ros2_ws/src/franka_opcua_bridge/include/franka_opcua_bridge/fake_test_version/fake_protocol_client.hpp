@@ -21,12 +21,9 @@ class FakeProtocolClient : public IOpcUaProtocolClient
 {
 
 public:
-  bool connect(
-    const std::string & endpoint,
-    const std::string & username,
-    const std::string & password) override;
+  bool connect() override;
 
-  void disconnect() override;
+  bool disconnect() override;
 
   bool isConnected() const override;
 

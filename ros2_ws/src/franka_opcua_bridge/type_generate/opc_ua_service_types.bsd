@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<opc:TypeDictionary
+  xmlns:opc="http://opcfoundation.org/BinarySchema/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ua="http://opcfoundation.org/UA/"
+  xmlns:tns="http://franka.de/opcua/"
+  DefaultByteOrder="LittleEndian"
+  TargetNamespace="http://franka.de/opcua/"
+>
+  <opc:Import Namespace="http://opcfoundation.org/UA/" Location="Opc.Ua.BinarySchema.bsd"/>
+  
+  <!-- Note when you modify any StructuredType in this file you also have to
+       change the values of TypeDictionary_BinarySchema and
+       TypeDictionary_XmlSchema in schema/opc_ua_service.xml (the huge base64
+       encoded strings), since they contain an encoded version the types. To do
+       that go to https://cryptii.com, click on "Enigma machine" and select
+       "Base64" in group "Encoding". OPC UA uses the variant RFC 3548. Now you
+       can use the tool to decode, modify and encode the two schemas.
+  -->
+
+  <opc:StructuredType BaseType="ua:ExtensionObject" Name="KeyIntPair">
+  <opc:Field TypeName="opc:String" Name="Key"/>
+  <opc:Field TypeName="opc:Int32" Name="Value"/>
+  </opc:StructuredType>
+
+  <opc:StructuredType Name="ExecutionStatus" BaseType="ua:ExtensionObject">
+    <opc:Field Name="HasError" TypeName="opc:Boolean" />
+    <opc:Field Name="IsRunning" TypeName="opc:Boolean" />
+    <opc:Field Name="ErrorMessage" TypeName="opc:String" />
+    <opc:Field Name="ActiveTaskName" TypeName="opc:String" />
+    <opc:Field Name="ActiveTaskId" TypeName="opc:String" />
+  </opc:StructuredType>
+  
+ <opc:StructuredType BaseType="ua:ExtensionObject" Name="KeyPosePair">
+  <opc:Field TypeName="opc:CharArray" Name="Key"/>
+  <opc:Field TypeName="opc:Int32" Name="NoOfValue"/>
+  <opc:Field LengthField="NoOfValue" TypeName="opc:Double" Name="Value"/>
+ </opc:StructuredType>
+
+</opc:TypeDictionary>

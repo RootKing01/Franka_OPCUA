@@ -64,13 +64,9 @@ class IProtocolClient
 public:
   virtual ~IProtocolClient() = default;
 
-  virtual bool connect(
+  virtual bool connect() = 0;      
 
-    const std::string & endpoint,
-    const std::string & username,
-    const std::string & password)  = 0;             //Attenzione al discorso password, controlla durante implementazione
-
-  virtual void disconnect() = 0;
+  virtual bool disconnect() = 0;
 
   virtual bool isConnected() const = 0;
 

@@ -10,7 +10,7 @@ class FakeRobot : public IFranka
 {
 public:
   bool connect() override;
-  void disconnect() override;
+  bool disconnect() override;
   bool isConnected() const override;
   bool requestControl(bool force) override;
   bool releaseControl() override;

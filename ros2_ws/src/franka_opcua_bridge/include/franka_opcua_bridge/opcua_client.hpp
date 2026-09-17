@@ -2,13 +2,14 @@
 #define FRANKA_OPCUA_BRIDGE__OPCUA_CLIENT_
 
 #include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
-#include <open62541/ua_client.h>
-#include <open62541/ua_config_default.h>
-#include <open62541/ua_client_highlevel.h>
-#include <open62541/ua_log_stdout.h>
+#include <open62541/client.h>
+#include <open62541/client_config_default.h>
+#include <open62541/client_highlevel.h>
+#include <open62541/plugin/log_stdout.h>
 
 #include <opc_ua_service_types_generated.h>
 #include <stdlib.h>
+#include <cstring>
 
 namespace franka_opcua_bridge
 {
@@ -18,6 +19,20 @@ class OpcuaClient : public IOpcUaProtocolClient
 {
 
 public:
+  OpcuaClient() = default;
+
+  //Disabilita copia
+  OpcuaClient(const OpcuaClient &) = delete;
+  OpcuaClient & operator=(const OpcuaClient &) = delete;
+  
+  bool connect() override;
+  bool disconnect() override;
+  bool isConnected() const override;
+
+  //Il distruttore fa cleanup
+  ~OpcuaClient() override;
+
+
   CallResult callMethod(
 
     const std::vector<std::string> & object_browse_path,
@@ -35,11 +50,19 @@ public:
     const Value & out_value) override;
 
 private:
+  std::string endpoint_;
+  std::string user_;
+  UA_Client * client_ = nullptr;
+
+
   UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path);
 
   void writeKeyIntPair(UA_Client * client, std::string key, int value);
 
   UA_Int32 readKeyIntPair(UA_Client * client, std::string key);
+
+  bool setEndpointAndUser(std::string endpoint, std::string user);
+
 
 };
 

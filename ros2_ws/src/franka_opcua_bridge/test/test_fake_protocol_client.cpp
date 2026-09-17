@@ -19,19 +19,9 @@ TEST(FakeProtocolClientTest, checkConnection)
 {
   FakeProtocolClient client;
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
 
   EXPECT_TRUE(client.isConnected());
-}
-
-//Test connect() con imput stringa vuota
-TEST(FakeProtocolClientTest, checkEmptyString)
-{
-  FakeProtocolClient client;
-
-  client.connect("", "", "");
-
-  EXPECT_FALSE(client.isConnected());
 }
 
 //Test callMethod: se non sei connesso, deve restituire ok = false
@@ -50,7 +40,7 @@ TEST(FakeProtocolClientTest, checkCallMethodSuccess)
 {
   FakeProtocolClient client;
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
   CallResult result = client.callMethod({"Robot", "ExecutionControl"}, "OpenBrakes", {});
 
   EXPECT_TRUE(result.ok);
@@ -64,7 +54,7 @@ TEST(FakeProtocolClientTest, checkArgsCallMethodSuccess)
   size_t vuoto = 0;
   std::vector<Value> args = {Value(std::string("nameOperation")), Value(int32_t(42))};
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
   CallResult result = client.callMethod({"Robot", "ExecutionControl"}, "OpenBrakes", args);
 
 
@@ -79,7 +69,7 @@ TEST(FakeProtocolClientTest, verifyCallMethodWithCallLog)
   FakeProtocolClient client;
   CallResult result;
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
   std::vector<Value> args = {Value(std::string("nameOperation")), Value(int32_t(42))};
   result = client.callMethod({"Robot", "ExecutionControl"}, "OpenBrakes", args);
 
@@ -102,7 +92,7 @@ TEST(FakeProtocolClientTest, checkNewValueInRead)
   Value value;
   const std::vector<std::string> variable_browse_path = {"Robot", "ExecutionControl"};
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
 
   EXPECT_FALSE(client.readValue(variable_browse_path, value));
 
@@ -129,7 +119,7 @@ TEST(FakeProtocolClientTest, checkReadAndWrite)
   Value output;
   const std::vector<std::string> variable_browse_path = {"Robot", "ExecutionControl"};
 
-  client.connect("ab", "cd", "ef");
+  client.connect();
 
   ASSERT_TRUE(client.writeValue(variable_browse_path, value));
   ASSERT_TRUE(client.readValue(variable_browse_path, output));

@@ -7,26 +7,15 @@ namespace franka_opcua_bridge
 
 bool FakeProtocolClient::isConnected() const {return connected_;}
 
-bool FakeProtocolClient::connect(
-  const std::string & endpoint,
-  const std::string & username,
-  const std::string & password)
+bool FakeProtocolClient::connect()
 {
-
-  if (endpoint != "" &&
-    username != "" &&
-    password != "")
-  {
-
-    connected_ = true;
-    return true;
-  }
-
-  return false;
+  connected_ = true;
+  return connected_;
+  
 
 }
 
-void FakeProtocolClient::disconnect() {connected_ = false;}
+bool FakeProtocolClient::disconnect() {connected_ = false; return connected_;}
 
 
 CallResult FakeProtocolClient::callMethod(
