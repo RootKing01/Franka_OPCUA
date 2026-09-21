@@ -9,11 +9,33 @@
 
 namespace franka_opcua_bridge{
 
+
+// -- Tipi Franka-specific: mappano le struct custom del NodeSet OPC UA --
+
+struct KeyIntPairValue
+{
+  std::string key;
+  int32_t value;
+
+};
+
+struct KeyPosePair
+{
+  std::string key;
+  std::vector<double> value;
+};
+
+struct executionStatus
+{
+  bool has_error;
+  bool is_running;
+  std::string error_message;
+  std::string active_task_name;
+  std::string active_task_id;
+};
+
+
 // Rappresenta un valore che puo' viaggiare da/verso il server OPC UA.
-// Il caso "Struct" e' generico apposta: IProtocolClient non conosce
-// KeyPosePair/KeyIntPair, sa solo che esiste un tipo custom identificato
-// per nome, con campi con nome. Sara' OpcUaClient (concreto) a sapere
-// come serializzare una data struct nel corretto ExtensionObject.
 
 class Value
 {
