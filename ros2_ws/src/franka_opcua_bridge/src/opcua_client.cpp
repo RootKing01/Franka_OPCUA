@@ -5,12 +5,14 @@
 #include <open62541/plugin/log_stdout.h>
 
 #include <opc_ua_service_types_generated.h>
+#include "franka_opcua_bridge/opcua_value.hpp"
 
 #include <string>
 #include <vector>
 #include <iostream>
 #include <stdlib.h>
 #include <cstdlib>
+
 
 namespace franka_opcua_bridge
 {

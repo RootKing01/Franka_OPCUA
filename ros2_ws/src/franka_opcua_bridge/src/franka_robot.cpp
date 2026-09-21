@@ -1,4 +1,6 @@
 #include "franka_opcua_bridge/franka_robot.hpp"
+#include "franka_opcua_bridge/opcua_value.hpp"
+
 #include <chrono>
 #include <thread>
 #include "geometry_msgs/msg/pose.hpp"

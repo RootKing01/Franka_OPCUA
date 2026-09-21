@@ -2,6 +2,8 @@
 #define FRANKA_OPCUA_BRIDGE__OPCUA_CLIENT_
 
 #include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_value.hpp"
+
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
 #include <open62541/client_highlevel.h>

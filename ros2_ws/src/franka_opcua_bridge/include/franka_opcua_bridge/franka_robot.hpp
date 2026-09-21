@@ -9,6 +9,7 @@
 
 #include "franka_opcua_bridge/i_franka.hpp"
 #include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_value.hpp"
 
 namespace franka_opcua_bridge
 {

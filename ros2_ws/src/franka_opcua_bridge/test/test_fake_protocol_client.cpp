@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "franka_opcua_bridge/fake_test_version/fake_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_value.hpp"
 
 using franka_opcua_bridge::FakeProtocolClient;
 using franka_opcua_bridge::Value;
