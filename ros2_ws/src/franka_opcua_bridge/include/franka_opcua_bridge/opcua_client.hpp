@@ -56,6 +56,25 @@ private:
   std::string user_;
   UA_Client * client_ = nullptr;
 
+  // -- Conversione in lettura
+
+  std::string UA_StringConversion(const UA_String & string);
+
+  KeyIntPairValue convertKeyIntPair(const UA_KeyIntPair & pair);
+
+  KeyPosePairValue convertKeyPosePair(const UA_KeyPosePair & pair);
+  
+  ExecutionStatusValue convertExecutionStatus(const UA_ExecutionStatus & status);
+
+  // -- Fine --
+
+  // -- Conversione in scrittura
+
+  UA_KeyIntPair convertToUaKeyIntPair(const KeyIntPairValue & pair);
+
+  UA_KeyPosePair convertToUaKeyPosePair(const KeyPosePairValue & pair);
+
+  // -- Fine --
 
   UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path);
 

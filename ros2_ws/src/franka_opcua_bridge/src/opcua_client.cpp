@@ -12,6 +12,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cstdlib>
+#include <algorithm>
 
 
 namespace franka_opcua_bridge
@@ -143,13 +144,93 @@ bool OpcuaClient::writeValue(
   return false;
 }
 
+
+// -- Conversioni in lettura --
+
+std::string UA_StringConversion(const UA_String & string){
+
+  if (string.data == nullptr ) return "";
+
+  return std::string(reinterpret_cast<char*>(string.data), string.length);
+
+ }
+
+ KeyIntPairValue convertKeyIntPair(const UA_KeyIntPair & pair){
+
+  return KeyIntPairValue{UA_StringConversion(pair.key), pair.value};
+
+ }
+
+ KeyPosePairValue convertKeyPosePair(const UA_KeyPosePair & pair){
+
+  if (pair.value != nullptr)
+  {
+    return KeyPosePairValue{UA_StringConversion(pair.key), std::vector<double>(pair.value, pair.value + pair.valueSize)};
+  }
+  
+  return KeyPosePairValue{UA_StringConversion(pair.key), std::vector<double>{}};
+ 
+}
+
+ExecutionStatusValue convertExecutionStatus(const UA_ExecutionStatus & status){
+
+    return ExecutionStatusValue{status.hasError, 
+                                status.isRunning, 
+                                UA_StringConversion(status.errorMessage), 
+                                UA_StringConversion(status.activeTaskName),
+                                UA_StringConversion(status.activeTaskId)};
+
+}
+
+// -- Fine conversioni in lettura --
+
+
+// -- Conversione in scrittura --
+
+UA_KeyIntPair convertToUaKeyIntPair(const KeyIntPairValue & pair){
+
+  UA_KeyIntPair result;
+  result.key = UA_String_fromChars(pair.key.c_str());
+  result.value = pair.value;
+
+  return result;
+
+}
+
+
+UA_KeyPosePair convertToUaKeyPosePair(const KeyPosePairValue & pair){
+
+  UA_KeyPosePair result;
+  result.key = UA_String_fromChars(pair.key.c_str());
+  result.valueSize = pair.value.size();
+
+  //Nota il static_cast: UA_Array_new ritorna void* (è generica, funziona per qualunque tipo), quindi va castata al tipo puntatore giusto — qui serve un cast 
+  //esplicito, ma static_cast (non reinterpret_cast) perché convertiamo da/verso void*, un caso che il compilatore sa gestire in modo "controllato" 
+  //(è la conversione standard prevista per puntatori generici, diversa dal caso uint8_t*↔char* di prima).
+
+  result.value = static_cast<UA_Double *>( UA_Array_new(pair.value.size(), &UA_TYPES[UA_TYPES_DOUBLE]));
+
+  if (result.value == nullptr)
+  {
+    result.valueSize = 0;
+    
+    // O setto a 0 la dimensione per indicare l'errore durante l'allocazione, oppure sollevo eccezione
+    //throw std::bad_alloc();
+  }
+  else 
+  {
+    std::copy(pair.value.begin(), pair.value.end(), result.value);
+  }
+
+  return result;
+}
+
+// -- Fine conversione in scrittura --
+
 OpcuaClient::~OpcuaClient()
 {
   disconnect();
 }
-
-
-/* Code from Franka Emika OPC UA Service 7.0.1 - Simple C++ Client
 
 UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path)
 {
@@ -175,12 +256,13 @@ UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::strin
 
   UA_NodeId node_id = response.results[0].targets[0].targetId.nodeId;
 
-  UA_BrowsePath_deleteMembers(&ua_browse_path);
-  UA_TranslateBrowsePathsToNodeIdsResponse_deleteMembers(&response);
+  UA_BrowsePath_clear(&ua_browse_path);
+  UA_TranslateBrowsePathsToNodeIdsResponse_clear(&response);
 
   return node_id;
 }
 
+/*
 void writeKeyIntPair(UA_Client * client, std::string key, int value)
 {
   UA_NodeId object_id = TranslateBrowsePathtoNodeId(

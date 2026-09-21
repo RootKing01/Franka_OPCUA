@@ -19,13 +19,13 @@ struct KeyIntPairValue
 
 };
 
-struct KeyPosePair
+struct KeyPosePairValue
 {
   std::string key;
   std::vector<double> value;
 };
 
-struct executionStatus
+struct ExecutionStatusValue
 {
   bool has_error;
   bool is_running;
