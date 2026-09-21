@@ -117,11 +117,114 @@ CallResult OpcuaClient::callMethod(
   const std::string & method_name,
   const std::vector<Value> & args)
 {
-  (void)object_browse_path;
-  (void)method_name;
-  (void)args;
-  // TODO: non ancora implementato
-  return CallResult{};
+
+  
+  UA_NodeId object_id = TranslateBrowsePathtoNodeId(client_, object_browse_path);
+
+  std::vector<std::string> method_path = object_browse_path;
+  method_path.push_back(method_name);
+
+  UA_NodeId method_id = TranslateBrowsePathtoNodeId(client_, method_path);
+
+  size_t inputSize = args.size();
+
+  UA_Variant* inputs = static_cast<UA_Variant*>(UA_Array_new(args.size(), &UA_TYPES[UA_TYPES_VARIANT]));
+
+  for(size_t i = 0; i < inputSize; i++)
+  {
+    if (args[i].is<bool>())
+    {
+    
+      bool value = args[i].as<bool>();
+      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_BOOLEAN]);
+      
+    }
+    else if (args[i].is<int32_t>())
+    {
+      int32_t value = args[i].as<int32_t>();
+      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_INT32]);
+
+    }
+    else if (args[i].is<double>())
+    {
+      double value = args[i].as<double>();
+      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_DOUBLE]);
+
+    }
+    else
+    {
+      if (args[i].is<std::string>())
+      {
+        UA_String tmp = UA_String_fromChars(args[i].as<std::string>().c_str());
+        UA_Variant_setScalarCopy(&inputs[i], &tmp, &UA_TYPES[UA_TYPES_STRING]);
+        UA_String_clear(&tmp);
+
+      }
+      else if (args[i].is<std::vector<double>>())
+      {
+        const auto &values = args[i].as<std::vector<double>>();
+        UA_Double * tmp = static_cast<UA_Double*>(UA_Array_new(values.size(), &UA_TYPES[UA_TYPES_DOUBLE]));
+
+        for (size_t j = 0; j < values.size(); ++j)
+        {
+          tmp[j] = values[j];
+        }
+
+        UA_Variant_setArrayCopy(&inputs[i], tmp, values.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
+
+        UA_Array_delete(tmp, values.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
+      }
+    }
+  }
+
+  size_t outputSize = 0;
+  UA_Variant *output = nullptr;
+  CallResult result;
+
+  UA_StatusCode status = UA_Client_call(client_, object_id, method_id, inputSize, inputs, &outputSize, &output);
+
+  if (status != UA_STATUSCODE_GOOD) return CallResult{};
+
+  result.ok = true;
+  
+  for (size_t i = 0; i < outputSize; ++i)
+  {
+    if (output[i].type == &UA_TYPES[UA_TYPES_BOOLEAN])
+    {
+      result.output_values.emplace_back(*static_cast<UA_Boolean*>(output[i].data));
+    }
+    else if (output[i].type == &UA_TYPES[UA_TYPES_INT32])
+    {
+      result.output_values.emplace_back(*static_cast<UA_Int32*>(output[i].data));
+    }
+    else if (output[i].type == &UA_TYPES[UA_TYPES_DOUBLE] && UA_Variant_isScalar(&output[i]))
+    {
+      result.output_values.emplace_back(*static_cast<UA_Double*>(output[i].data));
+    }
+    else if (output[i].type == &UA_TYPES[UA_TYPES_STRING])
+    {
+      UA_String * value = static_cast<UA_String*>(output[i].data);
+      
+      std::string outputString(reinterpret_cast<char*>(value->data), value->length);
+  
+      result.output_values.emplace_back(outputString);
+    }
+    else if (output[i].type == &UA_TYPES[UA_TYPES_DOUBLE] && !UA_Variant_isScalar(&output[i]))
+    {
+      UA_Double * data = static_cast<UA_Double*>(output[i].data);
+
+      std::vector<double> values(data, data + output[i].arrayLength);
+
+      result.output_values.emplace_back(values);
+    }
+  }
+
+  UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+  UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+
+
+  return result;
+
 }
 
 bool OpcuaClient::readValue(
@@ -147,7 +250,7 @@ bool OpcuaClient::writeValue(
 
 // -- Conversioni in lettura --
 
-std::string UA_StringConversion(const UA_String & string){
+std::string OpcuaClient::UA_StringConversion(const UA_String & string){
 
   if (string.data == nullptr ) return "";
 
@@ -155,13 +258,13 @@ std::string UA_StringConversion(const UA_String & string){
 
  }
 
- KeyIntPairValue convertKeyIntPair(const UA_KeyIntPair & pair){
+ KeyIntPairValue OpcuaClient::convertKeyIntPair(const UA_KeyIntPair & pair){
 
   return KeyIntPairValue{UA_StringConversion(pair.key), pair.value};
 
  }
 
- KeyPosePairValue convertKeyPosePair(const UA_KeyPosePair & pair){
+ KeyPosePairValue OpcuaClient::convertKeyPosePair(const UA_KeyPosePair & pair){
 
   if (pair.value != nullptr)
   {
@@ -172,7 +275,7 @@ std::string UA_StringConversion(const UA_String & string){
  
 }
 
-ExecutionStatusValue convertExecutionStatus(const UA_ExecutionStatus & status){
+ExecutionStatusValue OpcuaClient::convertExecutionStatus(const UA_ExecutionStatus & status){
 
     return ExecutionStatusValue{status.hasError, 
                                 status.isRunning, 
@@ -187,7 +290,7 @@ ExecutionStatusValue convertExecutionStatus(const UA_ExecutionStatus & status){
 
 // -- Conversione in scrittura --
 
-UA_KeyIntPair convertToUaKeyIntPair(const KeyIntPairValue & pair){
+UA_KeyIntPair OpcuaClient::convertToUaKeyIntPair(const KeyIntPairValue & pair){
 
   UA_KeyIntPair result;
   result.key = UA_String_fromChars(pair.key.c_str());
@@ -198,7 +301,7 @@ UA_KeyIntPair convertToUaKeyIntPair(const KeyIntPairValue & pair){
 }
 
 
-UA_KeyPosePair convertToUaKeyPosePair(const KeyPosePairValue & pair){
+UA_KeyPosePair OpcuaClient::convertToUaKeyPosePair(const KeyPosePairValue & pair){
 
   UA_KeyPosePair result;
   result.key = UA_String_fromChars(pair.key.c_str());
@@ -232,7 +335,7 @@ OpcuaClient::~OpcuaClient()
   disconnect();
 }
 
-UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path)
+UA_NodeId OpcuaClient::TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path)
 {
   UA_BrowsePath ua_browse_path;
   UA_BrowsePath_init(&ua_browse_path);
