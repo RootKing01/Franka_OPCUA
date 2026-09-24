@@ -74,6 +74,8 @@ private:
 
   UA_KeyPosePair convertToUaKeyPosePair(const KeyPosePairValue & pair);
 
+  UA_ExecutionStatus convertToUaExecutionStatus(const ExecutionStatusValue & execStatus);
+
   // -- Fine --
 
   // -- Conversione Value -> UA_Variant -- 

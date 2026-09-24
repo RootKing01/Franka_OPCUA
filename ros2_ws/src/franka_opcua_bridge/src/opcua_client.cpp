@@ -264,6 +264,62 @@ bool OpcuaClient::valueToUaVariant(const Value &value, UA_Variant &variant)
 
         return status == UA_STATUSCODE_GOOD;
       }
+      else if (value.is<KeyIntPairValue>())
+      {
+        UA_KeyIntPair uaKeyInt = convertToUaKeyIntPair(value.as<KeyIntPairValue>());
+        
+        UA_ExtensionObject uaKeyIntExt;
+        UA_ExtensionObject_init(&uaKeyIntExt);
+        
+        
+        uaKeyIntExt.encoding = UA_EXTENSIONOBJECT_DECODED;
+        uaKeyIntExt.content.decoded.type = &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR];
+        uaKeyIntExt.content.decoded.data = &uaKeyInt;
+
+        UA_StatusCode status = UA_Variant_setScalarCopy(&variant, &uaKeyIntExt, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+
+        UA_clear(&uaKeyInt, &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]);
+
+        return status == UA_STATUSCODE_GOOD;
+
+      }
+      else if (value.is<KeyPosePairValue>())
+      {
+        UA_KeyPosePair uaKeyPose = convertToUaKeyPosePair(value.as<KeyPosePairValue>());
+        
+        UA_ExtensionObject uaKeyPoseExt;
+        UA_ExtensionObject_init(&uaKeyPoseExt);
+        
+        
+        uaKeyPoseExt.encoding = UA_EXTENSIONOBJECT_DECODED;
+        uaKeyPoseExt.content.decoded.type = &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR];
+        uaKeyPoseExt.content.decoded.data = &uaKeyPose;
+
+        UA_StatusCode status = UA_Variant_setScalarCopy(&variant, &uaKeyPoseExt, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+
+        UA_clear(&uaKeyPose, &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]);
+
+        return status == UA_STATUSCODE_GOOD;
+
+      }
+      else if (value.is<ExecutionStatusValue>())
+      {
+        UA_ExecutionStatus uaExecStat = convertToUaExecutionStatus(value.as<ExecutionStatusValue>());
+        
+        UA_ExtensionObject uaExecStatExt;
+        UA_ExtensionObject_init(&uaExecStatExt);
+        
+        uaExecStatExt.encoding = UA_EXTENSIONOBJECT_DECODED;
+        uaExecStatExt.content.decoded.type = &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS];
+        uaExecStatExt.content.decoded.data = &uaExecStat;
+
+        UA_StatusCode status = UA_Variant_setScalarCopy(&variant, &uaExecStatExt, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+
+        UA_clear(&uaExecStat, &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]);
+
+        return status == UA_STATUSCODE_GOOD;
+      }
+
     }
 
     return false;
@@ -411,7 +467,6 @@ UA_KeyIntPair OpcuaClient::convertToUaKeyIntPair(const KeyIntPairValue & pair){
 
 }
 
-
 UA_KeyPosePair OpcuaClient::convertToUaKeyPosePair(const KeyPosePairValue & pair){
 
   UA_KeyPosePair result;
@@ -437,6 +492,19 @@ UA_KeyPosePair OpcuaClient::convertToUaKeyPosePair(const KeyPosePairValue & pair
   }
 
   return result;
+}
+
+UA_ExecutionStatus OpcuaClient::convertToUaExecutionStatus(const ExecutionStatusValue & execStatus)
+{
+  UA_ExecutionStatus status;
+
+  status.hasError = static_cast<UA_Boolean>(execStatus.has_error);
+  status.isRunning = static_cast<UA_Boolean>(execStatus.is_running);
+  status.errorMessage = UA_String_fromChars(execStatus.error_message.c_str());
+  status.activeTaskName = UA_String_fromChars(execStatus.active_task_name.c_str());
+  status.activeTaskId = UA_String_fromChars(execStatus.active_task_id.c_str());
+
+  return status;
 }
 
 // -- Fine conversione in scrittura --
