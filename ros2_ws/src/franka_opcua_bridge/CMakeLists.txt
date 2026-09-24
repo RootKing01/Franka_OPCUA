@@ -29,6 +29,10 @@ ua_generate_datatypes(
   NAMESPACE_MAP "2:http://franka.de/opcua/"
 )
 
+target_sources(franka_bridge_node PRIVATE
+  ${PROJECT_BINARY_DIR}/src_generated/open62541/opc_ua_service_types_generated.c
+)
+
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
 target_link_libraries(franka_bridge_node open62541::open62541)
 add_dependencies(franka_bridge_node open62541-generator-opc-ua-service-types)

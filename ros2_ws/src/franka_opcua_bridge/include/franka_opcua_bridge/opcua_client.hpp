@@ -76,6 +76,12 @@ private:
 
   // -- Fine --
 
+  // -- Conversione Value -> UA_Variant -- 
+  bool valueToUaVariant(const Value &value, UA_Variant &variant);
+
+  // -- Conversione UA_Variant -> Value --
+  bool UaVariantToValue(const UA_Variant &variant, Value &value);
+
   UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path);
 
   void writeKeyIntPair(UA_Client * client, std::string key, int value);

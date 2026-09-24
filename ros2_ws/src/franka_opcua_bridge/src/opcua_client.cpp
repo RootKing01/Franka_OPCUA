@@ -72,19 +72,24 @@ bool OpcuaClient::connect()
   if (env_password == nullptr) {
     std::cout << "Errore nel recupero della password da variabile d'ambiente.";
     UA_Client_delete(client_);
+    client_ = nullptr;
     return false;
   }
 
+  size_t pw_len = strlen(env_password);
+  std::vector<char> pwd_copy(env_password, env_password+pw_len);
+
   UA_StatusCode success = UA_Client_connectUsername(
     client_, endpoint_.c_str(),
-    user_.c_str(), env_password);
+    user_.c_str(), pwd_copy.data());
 
   //Pulizia passsword
-  explicit_bzero(env_password, strlen(env_password));
+  explicit_bzero(pwd_copy.data(), pwd_copy.size());
 
   if (success != UA_STATUSCODE_GOOD) {
 
     UA_Client_delete(client_);
+    client_ = nullptr;
     return false;
 
   }
@@ -132,48 +137,12 @@ CallResult OpcuaClient::callMethod(
 
   for(size_t i = 0; i < inputSize; i++)
   {
-    if (args[i].is<bool>())
+    bool success = valueToUaVariant(args[i], inputs[i]);
+
+    if (!success)
     {
-    
-      bool value = args[i].as<bool>();
-      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_BOOLEAN]);
-      
-    }
-    else if (args[i].is<int32_t>())
-    {
-      int32_t value = args[i].as<int32_t>();
-      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_INT32]);
-
-    }
-    else if (args[i].is<double>())
-    {
-      double value = args[i].as<double>();
-      UA_Variant_setScalarCopy(&inputs[i], &value, &UA_TYPES[UA_TYPES_DOUBLE]);
-
-    }
-    else
-    {
-      if (args[i].is<std::string>())
-      {
-        UA_String tmp = UA_String_fromChars(args[i].as<std::string>().c_str());
-        UA_Variant_setScalarCopy(&inputs[i], &tmp, &UA_TYPES[UA_TYPES_STRING]);
-        UA_String_clear(&tmp);
-
-      }
-      else if (args[i].is<std::vector<double>>())
-      {
-        const auto &values = args[i].as<std::vector<double>>();
-        UA_Double * tmp = static_cast<UA_Double*>(UA_Array_new(values.size(), &UA_TYPES[UA_TYPES_DOUBLE]));
-
-        for (size_t j = 0; j < values.size(); ++j)
-        {
-          tmp[j] = values[j];
-        }
-
-        UA_Variant_setArrayCopy(&inputs[i], tmp, values.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
-
-        UA_Array_delete(tmp, values.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
-      }
+      UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+      return CallResult{};
     }
   }
 
@@ -183,40 +152,27 @@ CallResult OpcuaClient::callMethod(
 
   UA_StatusCode status = UA_Client_call(client_, object_id, method_id, inputSize, inputs, &outputSize, &output);
 
-  if (status != UA_STATUSCODE_GOOD) return CallResult{};
+  if (status != UA_STATUSCODE_GOOD)
+  {
+    UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    return CallResult{};
+  } 
 
   result.ok = true;
   
   for (size_t i = 0; i < outputSize; ++i)
   {
-    if (output[i].type == &UA_TYPES[UA_TYPES_BOOLEAN])
-    {
-      result.output_values.emplace_back(*static_cast<UA_Boolean*>(output[i].data));
-    }
-    else if (output[i].type == &UA_TYPES[UA_TYPES_INT32])
-    {
-      result.output_values.emplace_back(*static_cast<UA_Int32*>(output[i].data));
-    }
-    else if (output[i].type == &UA_TYPES[UA_TYPES_DOUBLE] && UA_Variant_isScalar(&output[i]))
-    {
-      result.output_values.emplace_back(*static_cast<UA_Double*>(output[i].data));
-    }
-    else if (output[i].type == &UA_TYPES[UA_TYPES_STRING])
-    {
-      UA_String * value = static_cast<UA_String*>(output[i].data);
-      
-      std::string outputString(reinterpret_cast<char*>(value->data), value->length);
-  
-      result.output_values.emplace_back(outputString);
-    }
-    else if (output[i].type == &UA_TYPES[UA_TYPES_DOUBLE] && !UA_Variant_isScalar(&output[i]))
-    {
-      UA_Double * data = static_cast<UA_Double*>(output[i].data);
+    Value tmp;
+    bool success = UaVariantToValue(output[i], tmp);
 
-      std::vector<double> values(data, data + output[i].arrayLength);
+    if (!success)
+    {
+      UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+      UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+      return CallResult{};
+    } 
 
-      result.output_values.emplace_back(values);
-    }
+    result.output_values.emplace_back(tmp);
   }
 
   UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
@@ -230,11 +186,20 @@ CallResult OpcuaClient::callMethod(
 bool OpcuaClient::readValue(
   const std::vector<std::string> & variable_browse_path,
   Value & out_value)
-{
-  (void)variable_browse_path;
-  (void)out_value;
-  // TODO: non ancora implementato
-  return false;
+{ 
+  UA_Variant variantOutput;
+  UA_Variant_init(&variantOutput);
+
+  UA_NodeId nodePath_id = TranslateBrowsePathtoNodeId(client_, variable_browse_path);
+
+  UA_StatusCode status = UA_Client_readValueAttribute(client_, nodePath_id, &variantOutput);
+
+  if (status != UA_STATUSCODE_GOOD) return false;
+
+  bool success = UaVariantToValue(variantOutput, out_value);
+  UA_Variant_clear(&variantOutput);
+
+  return success;
 }
 
 bool OpcuaClient::writeValue(
@@ -246,6 +211,152 @@ bool OpcuaClient::writeValue(
   // TODO: non ancora implementato
   return false;
 }
+
+// -- Conversione Value -> UA_Variant --
+
+bool OpcuaClient::valueToUaVariant(const Value &value, UA_Variant &variant)
+{
+   if (value.is<bool>())
+    {
+    
+      bool boolValue = value.as<bool>();
+      return UA_Variant_setScalarCopy(&variant, &boolValue, &UA_TYPES[UA_TYPES_BOOLEAN]) == UA_STATUSCODE_GOOD;
+      
+    }
+    else if (value.is<int32_t>())
+    {
+      int32_t intValue = value.as<int32_t>();
+      return UA_Variant_setScalarCopy(&variant, &intValue, &UA_TYPES[UA_TYPES_INT32]) == UA_STATUSCODE_GOOD;
+
+    }
+    else if (value.is<double>())
+    {
+      double DoubleValue = value.as<double>();
+      return UA_Variant_setScalarCopy(&variant, &DoubleValue, &UA_TYPES[UA_TYPES_DOUBLE]) == UA_STATUSCODE_GOOD;
+
+    }
+    else
+    {
+      if (value.is<std::string>())
+      {
+        UA_String tmp = UA_String_fromChars(value.as<std::string>().c_str());
+        UA_StatusCode status = UA_Variant_setScalarCopy(&variant, &tmp, &UA_TYPES[UA_TYPES_STRING]);
+        UA_String_clear(&tmp);
+
+        return status == UA_STATUSCODE_GOOD;
+
+      }
+      else if (value.is<std::vector<double>>())
+      {
+        const auto &VectorValues = value.as<std::vector<double>>();
+        UA_Double * tmp = static_cast<UA_Double*>(UA_Array_new(VectorValues.size(), &UA_TYPES[UA_TYPES_DOUBLE]));
+
+        if (tmp == nullptr && !VectorValues.empty()) return false;
+
+        for (size_t j = 0; j < VectorValues.size(); ++j)
+        {
+          tmp[j] = VectorValues[j];
+        }
+
+        UA_StatusCode status = UA_Variant_setArrayCopy(&variant, tmp, VectorValues.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
+
+        UA_Array_delete(tmp, VectorValues.size(), &UA_TYPES[UA_TYPES_DOUBLE]);
+
+        return status == UA_STATUSCODE_GOOD;
+      }
+    }
+
+    return false;
+}
+
+// -- Conversione UA_Variant -> Value --
+
+bool OpcuaClient::UaVariantToValue(const UA_Variant &variant, Value &value)
+{
+
+  if (variant.type == &UA_TYPES[UA_TYPES_BOOLEAN])
+    {
+      value = Value(*static_cast<UA_Boolean*>(variant.data));
+      return true;
+    }
+    
+  if (variant.type == &UA_TYPES[UA_TYPES_INT32])
+  {
+    value = Value(*static_cast<UA_Int32*>(variant.data));
+    return true;
+  }
+    
+  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] && UA_Variant_isScalar(&variant))
+  {
+    value = Value(*static_cast<UA_Double*>(variant.data));
+    return true;
+  }
+    
+  if (variant.type == &UA_TYPES[UA_TYPES_STRING])
+  {
+    UA_String * strValue = static_cast<UA_String*>(variant.data);
+      
+    std::string outputString(reinterpret_cast<char*>(strValue->data), strValue->length);
+  
+    value = Value(outputString);
+
+    return true;
+  }
+    
+  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] && !UA_Variant_isScalar(&variant))
+  {
+    UA_Double * data = static_cast<UA_Double*>(variant.data);
+
+    std::vector<double> doubleValues(data, data + variant.arrayLength);
+
+    value = Value(doubleValues);
+    return true;
+  }
+
+  if (variant.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] && UA_Variant_isScalar(&variant))
+  {
+    UA_ExtensionObject *extension = static_cast<UA_ExtensionObject*>(variant.data);
+
+    if (extension->encoding == UA_EXTENSIONOBJECT_DECODED || extension->encoding == UA_EXTENSIONOBJECT_DECODED_NODELETE)
+    {
+      if (extension->content.decoded.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR])
+      {
+        UA_KeyIntPair *intKeyPair = static_cast<UA_KeyIntPair *>(extension->content.decoded.data);
+
+        value = Value(convertKeyIntPair(*intKeyPair));
+
+        return true;
+
+      }
+      else if (extension->content.decoded.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR])
+      {
+        UA_KeyPosePair * keyPose = static_cast<UA_KeyPosePair*>(extension->content.decoded.data);
+
+        value = Value(convertKeyPosePair(*keyPose));
+        
+        return true;
+
+      }
+      else if (extension->content.decoded.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS])
+      {
+        UA_ExecutionStatus * execStatus = static_cast<UA_ExecutionStatus*>(extension->content.decoded.data);
+
+        value = Value(convertExecutionStatus(*execStatus));
+
+        return true;
+
+      }
+      else
+      {
+        return false;
+      }
+    }
+  }
+
+    return false;
+
+}
+
 
 
 // -- Conversioni in lettura --
