@@ -206,10 +206,21 @@ bool OpcuaClient::writeValue(
   const std::vector<std::string> & variable_browse_path,
   const Value & out_value)
 {
-  (void)variable_browse_path;
-  (void)out_value;
-  // TODO: non ancora implementato
-  return false;
+  
+  UA_Variant variantInput;
+  UA_Variant_init(&variantInput);
+
+  UA_NodeId nodePath_id = TranslateBrowsePathtoNodeId(client_, variable_browse_path);
+
+  bool conversion = valueToUaVariant(out_value, variantInput);
+
+  if (!conversion) return false;
+
+  UA_StatusCode status = UA_Client_writeValueAttribute(client_, nodePath_id, &variantInput);
+  
+  UA_Variant_clear(&variantInput);
+
+  return status == UA_STATUSCODE_GOOD;
 }
 
 // -- Conversione Value -> UA_Variant --
