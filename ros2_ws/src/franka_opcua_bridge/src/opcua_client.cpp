@@ -77,7 +77,7 @@ bool OpcuaClient::connect()
   }
 
   size_t pw_len = strlen(env_password);
-  std::vector<char> pwd_copy(env_password, env_password+pw_len);
+  std::vector<char> pwd_copy(env_password, env_password+pw_len+1);
 
   UA_StatusCode success = UA_Client_connectUsername(
     client_, endpoint_.c_str(),
@@ -126,14 +126,29 @@ CallResult OpcuaClient::callMethod(
   
   UA_NodeId object_id = TranslateBrowsePathtoNodeId(client_, object_browse_path);
 
+  if (UA_NodeId_isNull(&object_id)) return CallResult{};
+
   std::vector<std::string> method_path = object_browse_path;
   method_path.push_back(method_name);
 
   UA_NodeId method_id = TranslateBrowsePathtoNodeId(client_, method_path);
 
+  if (UA_NodeId_isNull(&method_id))
+  {
+    UA_NodeId_clear(&object_id);
+    return CallResult{};
+  }
+
   size_t inputSize = args.size();
 
   UA_Variant* inputs = static_cast<UA_Variant*>(UA_Array_new(args.size(), &UA_TYPES[UA_TYPES_VARIANT]));
+
+  if (inputs == nullptr && inputSize > 0)
+  {
+    UA_NodeId_clear(&object_id);
+    UA_NodeId_clear(&method_id);
+    return CallResult{};
+  }
 
   for(size_t i = 0; i < inputSize; i++)
   {
@@ -142,6 +157,8 @@ CallResult OpcuaClient::callMethod(
     if (!success)
     {
       UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+      UA_NodeId_clear(&object_id);
+      UA_NodeId_clear(&method_id);
       return CallResult{};
     }
   }
@@ -155,6 +172,8 @@ CallResult OpcuaClient::callMethod(
   if (status != UA_STATUSCODE_GOOD)
   {
     UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+    UA_NodeId_clear(&object_id);
+    UA_NodeId_clear(&method_id);
     return CallResult{};
   } 
 
@@ -169,6 +188,8 @@ CallResult OpcuaClient::callMethod(
     {
       UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
       UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+      UA_NodeId_clear(&object_id);
+      UA_NodeId_clear(&method_id);
       return CallResult{};
     } 
 
@@ -177,6 +198,9 @@ CallResult OpcuaClient::callMethod(
 
   UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
   UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
+
+  UA_NodeId_clear(&object_id);
+  UA_NodeId_clear(&method_id);
 
 
   return result;
@@ -192,12 +216,20 @@ bool OpcuaClient::readValue(
 
   UA_NodeId nodePath_id = TranslateBrowsePathtoNodeId(client_, variable_browse_path);
 
+  if (UA_NodeId_isNull(&nodePath_id)) return false;
+
   UA_StatusCode status = UA_Client_readValueAttribute(client_, nodePath_id, &variantOutput);
 
-  if (status != UA_STATUSCODE_GOOD) return false;
+  if (status != UA_STATUSCODE_GOOD)
+  {
+    UA_NodeId_clear(&nodePath_id);
+    return false;
+  } 
 
   bool success = UaVariantToValue(variantOutput, out_value);
   UA_Variant_clear(&variantOutput);
+
+  UA_NodeId_clear(&nodePath_id);
 
   return success;
 }
@@ -212,13 +244,20 @@ bool OpcuaClient::writeValue(
 
   UA_NodeId nodePath_id = TranslateBrowsePathtoNodeId(client_, variable_browse_path);
 
+  if (UA_NodeId_isNull(&nodePath_id)) return false;
+
   bool conversion = valueToUaVariant(out_value, variantInput);
 
-  if (!conversion) return false;
+  if (!conversion) 
+  {
+    UA_NodeId_clear(&nodePath_id);
+    return false;
+  }
 
   UA_StatusCode status = UA_Client_writeValueAttribute(client_, nodePath_id, &variantInput);
   
   UA_Variant_clear(&variantInput);
+  UA_NodeId_clear(&nodePath_id);
 
   return status == UA_STATUSCODE_GOOD;
 }
@@ -489,7 +528,7 @@ UA_KeyPosePair OpcuaClient::convertToUaKeyPosePair(const KeyPosePairValue & pair
   //(è la conversione standard prevista per puntatori generici, diversa dal caso uint8_t*↔char* di prima).
 
   result.value = static_cast<UA_Double *>( UA_Array_new(pair.value.size(), &UA_TYPES[UA_TYPES_DOUBLE]));
-
+  
   if (result.value == nullptr)
   {
     result.valueSize = 0;
@@ -547,7 +586,25 @@ UA_NodeId OpcuaClient::TranslateBrowsePathtoNodeId(UA_Client * client, std::vect
   UA_TranslateBrowsePathsToNodeIdsResponse response =
     UA_Client_Service_translateBrowsePathsToNodeIds(client, request);
 
-  UA_NodeId node_id = response.results[0].targets[0].targetId.nodeId;
+  if (response.resultsSize == 0 || response.results[0].statusCode != UA_STATUSCODE_GOOD || response.results[0].targetsSize == 0)
+  {
+    UA_BrowsePath_clear(&ua_browse_path);
+    UA_TranslateBrowsePathsToNodeIdsResponse_clear(&response);
+    return UA_NODEID_NULL;
+  }
+
+  UA_NodeId node_id;
+  UA_NodeId_init(&node_id);
+  
+  UA_StatusCode status = UA_NodeId_copy(&response.results[0].targets[0].targetId.nodeId, &node_id);
+
+  if ( status != UA_STATUSCODE_GOOD)
+  {
+    UA_NodeId_clear(&node_id);
+    UA_BrowsePath_clear(&ua_browse_path);
+    UA_TranslateBrowsePathsToNodeIdsResponse_clear(&response);
+    return UA_NODEID_NULL;
+  }
 
   UA_BrowsePath_clear(&ua_browse_path);
   UA_TranslateBrowsePathsToNodeIdsResponse_clear(&response);
@@ -555,79 +612,6 @@ UA_NodeId OpcuaClient::TranslateBrowsePathtoNodeId(UA_Client * client, std::vect
   return node_id;
 }
 
-/*
-void writeKeyIntPair(UA_Client * client, std::string key, int value)
-{
-  UA_NodeId object_id = TranslateBrowsePathtoNodeId(
-    client, std::vector<std::string>{"Robot",
-      "KeyValueMaps", "KeyIntMap"});
-  UA_NodeId replace_id = TranslateBrowsePathtoNodeId(
-    client, std::vector<std::string>{"Robot",
-      "KeyValueMaps", "KeyIntMap", "Replace"});
-
-  UA_String argString = UA_String_fromChars(const_cast<char *>(key.c_str()));
-  UA_KeyIntPair my_value;
-  my_value.key = argString;
-  my_value.value = value;
-
-  UA_ExtensionObject eo;
-  UA_ExtensionObject_init(&eo);
-  eo.encoding = UA_EXTENSIONOBJECT_DECODED;
-  eo.content.decoded.data = &my_value;
-  eo.content.decoded.type = &OPC_UA_SERVICE_TYPES[OPC_UA_SERVICE_TYPES_KEYINTPAIR];
-
-  UA_Variant input;
-  UA_Variant_init(&input);
-  UA_Variant_setScalarCopy(&input, &eo, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
-
-  UA_Variant * output;
-  size_t outputSize;
-  UA_StatusCode retval = UA_Client_call(
-    client, object_id, replace_id, 1, &input, &outputSize,
-    &output);
-  if (retval != UA_STATUSCODE_GOOD) {
-    UA_LOG_INFO(
-      UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-      "[OPC UA Client] WriteKeyIntPair: Method call was unsuccessful!");
-    return;
-  }
-  UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
-}
-
-UA_Int32 readKeyIntPair(UA_Client * client, std::string key)
-{
-  UA_NodeId object_id = TranslateBrowsePathtoNodeId(
-    client, std::vector<std::string>{"Robot",
-      "KeyValueMaps", "KeyIntMap"});
-  UA_NodeId read_id = TranslateBrowsePathtoNodeId(
-    client, std::vector<std::string>{"Robot",
-      "KeyValueMaps", "KeyIntMap", "Read"});
-
-  UA_String argString = UA_String_fromChars(const_cast<char *>(key.c_str()));
-  UA_KeyIntPair ret;
-
-  UA_Variant input;
-  UA_Variant_init(&input);
-  UA_Variant_setScalarCopy(&input, &argString, &UA_TYPES[UA_TYPES_STRING]);
-
-  UA_Variant * output;
-  size_t outputSize;
-  UA_StatusCode retval =
-    UA_Client_call(client, object_id, read_id, 1, &input, &outputSize, &output);
-  if (retval != UA_STATUSCODE_GOOD) {
-    UA_LOG_INFO(
-      UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-      "[OPC UA Client] WriteKeyIntPair: Method call was unsuccessful!");
-    return 0;
-  }
-
-  UA_Int32 value = *(static_cast<UA_Int32 *>(output->data));
-  UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
-
-  return value;
-}
-
-*/
 
 
 }

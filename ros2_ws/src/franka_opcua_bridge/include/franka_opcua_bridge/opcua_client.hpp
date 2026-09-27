@@ -86,6 +86,8 @@ private:
 
   UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path);
 
+  UA_BrowseRequest exploreAddressSpace(UA_Client * client);
+
   void writeKeyIntPair(UA_Client * client, std::string key, int value);
 
   UA_Int32 readKeyIntPair(UA_Client * client, std::string key);
