@@ -359,18 +359,8 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   // Costruzione del KeyPosePair:
   // Key   = "target_pose"
   // Value = matrice 4x4 (16 double)
-  Value::Struct keyPosePair;
-
-  keyPosePair["Key"] = Value(std::string("target_pose"));
-  keyPosePair["Value"] = Value(values);
-
-  // Replace(KeyPosePair)
-  std::vector<Value> replaceArgs;
-  replaceArgs.push_back(Value(keyPosePair));
-
-  resultReplace = client_->callMethod(pathKeyPose, "Replace", replaceArgs);
-
-  if (!resultReplace.ok) {
+  
+  if (!buildKeyPosePair("target_pose", values)) {
     return false;
   }
 
@@ -402,6 +392,41 @@ std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose
   return value;
 
    
+}
+
+bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value)
+{
+  Value::Struct keyPosePair;
+
+  keyPosePair["Key"] = Value(pose_id);
+  keyPosePair["Value"] = Value(value);
+
+  // Replace(KeyPosePair)
+  std::vector<Value> replaceArgs;
+  replaceArgs.push_back(Value(keyPosePair));
+
+  std::vector<std::string> pathKeyPose = kPoseMapPath;
+  pathKeyPose.push_back("KeyPoseMap");
+
+  CallResult result = client_->callMethod(pathKeyPose, "Replace", replaceArgs);
+
+  return result.ok;
+}
+
+
+bool FrankaRobot::savePose(const std::string & pose_id)
+{
+
+  geometry_msgs::msg::Pose pose = readCartesianPose();
+  
+  std::vector<double> poseVector = fromPoseToVector(pose);
+
+  if (poseVector.size() != 16){
+
+    return false;
+  }
+
+   return buildKeyPosePair(pose_id, poseVector);
 }
 
 

@@ -51,6 +51,8 @@ public:
   std::vector<double> readTorque() override;
   geometry_msgs::msg::Wrench readWrench() override;
 
+  bool savePose(const std::string & pose_id);
+
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
 
@@ -62,8 +64,12 @@ private:
   static const std::vector<std::string> kExecutionControlPath;
 
   //Conversione in lettura, necessaria nel metodo savePose
-  
-  std::vector<double> fromPoseToVector(geometry_msgs::msg::Pose pose);
+
+  std::vector<double> fromPoseToVector(const geometry_msgs::msg::Pose & pose);
+
+  bool buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value);
+
+
 
 };
 
