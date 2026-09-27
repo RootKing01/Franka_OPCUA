@@ -377,4 +377,33 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   // Avvia il task che utilizza target_pose
   return executeNamedTask("opcua_goto");
 }
+
+std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose &pose)
+{
+  Eigen::Matrix4d matrix;
+
+  Eigen::Quaterniond quaternion(pose.orientation.w,
+                                pose.orientation.x,
+                                pose.orientation.y,
+                                pose.orientation.z
+                              );
+
+   const Eigen::Matrix3d rotation = quaternion.toRotationMatrix();
+
+  matrix.block<3,3>(0,0) = rotation;
+
+  matrix(0,3) = pose.position.x;
+  matrix(1,3) = pose.position.y;
+  matrix(2,3) = pose.position.z;
+
+  matrix.block<1, 4>(3, 0) << 0.0, 0.0, 0.0, 1.0;
+
+  std::vector<double> value(matrix.data(), matrix.data()+16);
+  return value;
+
+   
+}
+
+
+
 }

@@ -61,6 +61,10 @@ protected:
 private:
   static const std::vector<std::string> kExecutionControlPath;
 
+  //Conversione in lettura, necessaria nel metodo savePose
+  
+  std::vector<double> fromPoseToVector(geometry_msgs::msg::Pose pose);
+
 };
 
 
