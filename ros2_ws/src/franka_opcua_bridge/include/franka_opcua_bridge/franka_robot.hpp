@@ -51,7 +51,12 @@ public:
   std::vector<double> readTorque() override;
   geometry_msgs::msg::Wrench readWrench() override;
 
+  bool activateFCI() override;
+  bool deactivateFCI() override;
+
   bool savePose(const std::string & pose_id);
+
+  bool savePose(const std::string & pose_id, const geometry_msgs::msg::Pose & pose);
 
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
@@ -68,6 +73,10 @@ private:
   std::vector<double> fromPoseToVector(const geometry_msgs::msg::Pose & pose);
 
   bool buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value);
+
+  bool setIntegerVariable(const std::string & pose_id, const int32_t value);
+
+  
 
 
 

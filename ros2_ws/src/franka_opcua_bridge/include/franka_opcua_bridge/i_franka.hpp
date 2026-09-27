@@ -18,8 +18,8 @@ public:
 
   virtual bool stop() = 0;
 
-  //virtual bool activateFCI() = 0;
-  //virtual bool deactivateFCI() = 0;
+  virtual bool activateFCI() = 0;
+  virtual bool deactivateFCI() = 0;
 
 
 };

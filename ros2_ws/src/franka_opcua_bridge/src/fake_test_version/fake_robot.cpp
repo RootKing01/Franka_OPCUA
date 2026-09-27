@@ -84,4 +84,14 @@ geometry_msgs::msg::Pose FakeRobot::readCartesianPose()
   return pose;
 }
 
+bool FakeRobot::activateFCI()
+{
+  return connected_;
+}
+
+bool FakeRobot::deactivateFCI()
+{
+  return connected_;
+}
+
 }  // namespace franka_opcua_bridge

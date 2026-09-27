@@ -326,7 +326,7 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
 {
   std::vector<std::string> pathKeyPose = kPoseMapPath;
   std::vector<Value> args;
-  CallResult result, resultReplace;
+  CallResult result;
 
   pathKeyPose.push_back("KeyPoseMap");
 
@@ -416,9 +416,32 @@ bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vecto
 
 bool FrankaRobot::savePose(const std::string & pose_id)
 {
+  return savePose(pose_id, readCartesianPose());
+}
 
-  geometry_msgs::msg::Pose pose = readCartesianPose();
+bool FrankaRobot::setIntegerVariable(const std::string & variable_id, int32_t value)
+{
+  Value::Struct keyIntPair; 
   
+  keyIntPair["Key"] = Value(variable_id);
+  keyIntPair["Value"] = Value(value);
+
+  std::vector<Value> replaceArgs;
+  replaceArgs.push_back(Value(keyIntPair));
+
+  std::vector<std::string> pathKeyInt = kPoseMapPath;
+  pathKeyInt.push_back("KeyIntMap");
+
+  CallResult result = client_->callMethod(pathKeyInt, "Replace", replaceArgs);
+
+  return result.ok;
+
+}
+
+
+bool FrankaRobot::savePose(const std::string & pose_id, const geometry_msgs::msg::Pose & pose)
+{
+
   std::vector<double> poseVector = fromPoseToVector(pose);
 
   if (poseVector.size() != 16){
@@ -427,6 +450,21 @@ bool FrankaRobot::savePose(const std::string & pose_id)
   }
 
    return buildKeyPosePair(pose_id, poseVector);
+
+}
+
+bool FrankaRobot::activateFCI()
+{
+  CallResult result = client_->callMethod(kExecutionControlPath, "ActivateFCI", {});
+
+  return result.ok;
+}
+
+bool FrankaRobot::deactivateFCI()
+{
+  CallResult result = client_->callMethod(kExecutionControlPath, "DeactivateFCI", {});
+
+  return result.ok;
 }
 
 
