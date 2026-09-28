@@ -15,7 +15,7 @@ find_package(Eigen3 REQUIRED)
 
 include_directories(include)
 
-add_executable(franka_bridge_node src/franka_bridge_node.cpp src/opcua_client.cpp)
+add_executable(franka_bridge_node src/franka_bridge_node.cpp src/franka_robot.cpp src/opcua_client.cpp)
 
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
 
