@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 #include "geometry_msgs/msg/pose.hpp"
 #include <geometry_msgs/msg/wrench.hpp>
 
@@ -58,8 +59,10 @@ public:
 
   bool savePose(const std::string & pose_id, const geometry_msgs::msg::Pose & pose);
 
+  /*
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
+  */
 
 protected:
   std::unique_ptr<IOpcUaProtocolClient> client_;
@@ -67,6 +70,8 @@ protected:
 
 private:
   static const std::vector<std::string> kExecutionControlPath;
+
+  static constexpr double kTolerance = 1e-3;
 
   //Conversione in lettura, necessaria nel metodo savePose
 
@@ -76,6 +81,7 @@ private:
 
   bool setIntegerVariable(const std::string & pose_id, const int32_t value);
 
+  std::optional<geometry_msgs::msg::Pose> tryReadCartesianPose();
   
 
 

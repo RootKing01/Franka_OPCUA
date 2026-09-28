@@ -5,6 +5,7 @@
 #include <thread>
 #include "geometry_msgs/msg/pose.hpp"
 #include <Eigen/Dense>
+#include <cmath>
 
 namespace franka_opcua_bridge
 {
@@ -137,6 +138,8 @@ bool FrankaRobot::executeNamedTask(const std::string & task_id)
 }
 
 
+/* Codice non più necessario, lo tengo per sicurezza.
+
 template<typename T>
 T FrankaRobot::extractField(
   const Value::Struct & fields, const std::string & key,
@@ -156,7 +159,7 @@ T FrankaRobot::extractField(
   } else {return default_value;}
 
 }
-
+*/
 
 std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 {
@@ -164,6 +167,7 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
   Value output_value;
   std::string method = "ExecutionStatus";
   std::vector<std::string> path = kExecutionControlPath;
+  
   auto error_status = std::make_unique<FrankaRobotStatus>();
 
   error_status->error_message = "Struttura di default. Errore nella lettura dei dati sullo stato.";
@@ -174,15 +178,15 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
   bool success = client_->readValue(path, output_value);
 
   if (success) {
-    if (output_value.is<Value::Struct>()) {
+    if (output_value.is<ExecutionStatusValue>()) {
 
-      Value::Struct fields = output_value.as<Value::Struct>();
+      const ExecutionStatusValue & status = output_value.as<ExecutionStatusValue>();
 
-      robotStatus->has_error = extractField(fields, "HasError", false);
-      robotStatus->is_running = extractField(fields, "IsRunning", false);
-      robotStatus->error_message = extractField(fields, "ErrorMessage", std::string(""));
-      robotStatus->active_task_name = extractField(fields, "ActiveTaskName", std::string(""));
-      robotStatus->active_task_id = extractField(fields, "ActiveTaskId", std::string(""));
+      robotStatus->has_error = status.has_error;
+      robotStatus->is_running = status.is_running;
+      robotStatus->error_message = status.error_message;
+      robotStatus->active_task_name = status.active_task_name;
+      robotStatus->active_task_id = status.active_task_id;
 
       return robotStatus;
 
@@ -216,52 +220,14 @@ std::vector<double> FrankaRobot::readJointAngles()
 //Legge lo stato cartesiano dell'end-effector (la pinza)
 geometry_msgs::msg::Pose FrankaRobot::readCartesianPose()
 {
-
-  Value output_value;
-  std::vector<std::string> path = kExecutionControlPath;
-  std::string method = "CartesianPose";
-  Eigen::Matrix4d matrix;
-  geometry_msgs::msg::Pose pose;
   geometry_msgs::msg::Pose fallback;
   fallback.orientation.w = 1.0;
 
-  path.push_back(method);
+  auto pose = tryReadCartesianPose();
+  
+  if (!pose) return fallback;
 
-  bool success = client_->readValue(path, output_value);
-
-  if (success && output_value.is<std::vector<double>>() &&
-    output_value.as<std::vector<double>>().size() == 16)
-  {
-
-    const std::vector<double> & values = output_value.as<std::vector<double>>();
-
-    //16 double restituiti da Franka server in ordine column-major (quello che ci serve per Eigen)
-
-    matrix = Eigen::Map<const Eigen::Matrix4d>(values.data());     //values.data(): puntatore al primo elemento dei double.
-
-    //Estrazione della matrice di rotazione 3x3
-    const Eigen::Matrix3d rotation = matrix.block<3, 3>(0, 0);
-
-    //Conversione della matrice di rotazione in quaternione
-
-    Eigen::Quaterniond quaternion(rotation);
-
-    // Posizione
-    pose.position.x = matrix(0, 3);
-    pose.position.y = matrix(1, 3);
-    pose.position.z = matrix(2, 3);
-
-    // Orientamento
-    pose.orientation.x = quaternion.x();
-    pose.orientation.y = quaternion.y();
-    pose.orientation.z = quaternion.z();
-    pose.orientation.w = quaternion.w();
-
-    return pose;
-
-  }
-
-  return fallback;
+  return *pose;
 
 
 }
@@ -372,13 +338,19 @@ std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose
 {
   Eigen::Matrix4d matrix;
 
+  if(!(std::isfinite(pose.position.x)) || !(std::isfinite(pose.position.y)) || !(std::isfinite(pose.position.z))) return {};
+
   Eigen::Quaterniond quaternion(pose.orientation.w,
                                 pose.orientation.x,
                                 pose.orientation.y,
                                 pose.orientation.z
                               );
 
-   const Eigen::Matrix3d rotation = quaternion.toRotationMatrix();
+  if (!(std::abs(quaternion.norm() - 1.0) < kTolerance)) return {};
+
+  quaternion.normalize();
+  
+  const Eigen::Matrix3d rotation = quaternion.toRotationMatrix();
 
   matrix.block<3,3>(0,0) = rotation;
 
@@ -396,14 +368,9 @@ std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose
 
 bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value)
 {
-  Value::Struct keyPosePair;
-
-  keyPosePair["Key"] = Value(pose_id);
-  keyPosePair["Value"] = Value(value);
-
   // Replace(KeyPosePair)
   std::vector<Value> replaceArgs;
-  replaceArgs.push_back(Value(keyPosePair));
+  replaceArgs.push_back(Value(KeyPosePairValue{pose_id, value}));
 
   std::vector<std::string> pathKeyPose = kPoseMapPath;
   pathKeyPose.push_back("KeyPoseMap");
@@ -416,18 +383,19 @@ bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vecto
 
 bool FrankaRobot::savePose(const std::string & pose_id)
 {
-  return savePose(pose_id, readCartesianPose());
+  
+  auto pose = tryReadCartesianPose();
+  
+  if (!pose) return false;
+  
+  return savePose(pose_id, *pose);
 }
 
 bool FrankaRobot::setIntegerVariable(const std::string & variable_id, int32_t value)
 {
-  Value::Struct keyIntPair; 
   
-  keyIntPair["Key"] = Value(variable_id);
-  keyIntPair["Value"] = Value(value);
-
   std::vector<Value> replaceArgs;
-  replaceArgs.push_back(Value(keyIntPair));
+  replaceArgs.push_back(Value(KeyIntPairValue{variable_id, value}));
 
   std::vector<std::string> pathKeyInt = kPoseMapPath;
   pathKeyInt.push_back("KeyIntMap");
@@ -467,6 +435,52 @@ bool FrankaRobot::deactivateFCI()
   return result.ok;
 }
 
+std::optional<geometry_msgs::msg::Pose> FrankaRobot::tryReadCartesianPose()
+{
+  Value output_value;
+  std::vector<std::string> path = kExecutionControlPath;
+  std::string method = "CartesianPose";
+  Eigen::Matrix4d matrix;
+  geometry_msgs::msg::Pose pose;
 
+  path.push_back(method);
+
+  bool success = client_->readValue(path, output_value);
+
+  if (success && output_value.is<std::vector<double>>() &&
+    output_value.as<std::vector<double>>().size() == 16)
+  {
+
+    const std::vector<double> & values = output_value.as<std::vector<double>>();
+
+    //16 double restituiti da Franka server in ordine column-major (quello che ci serve per Eigen)
+
+    matrix = Eigen::Map<const Eigen::Matrix4d>(values.data());     //values.data(): puntatore al primo elemento dei double.
+
+    //Estrazione della matrice di rotazione 3x3
+    const Eigen::Matrix3d rotation = matrix.block<3, 3>(0, 0);
+
+    //Conversione della matrice di rotazione in quaternione
+
+    Eigen::Quaterniond quaternion(rotation);
+
+    // Posizione
+    pose.position.x = matrix(0, 3);
+    pose.position.y = matrix(1, 3);
+    pose.position.z = matrix(2, 3);
+
+    // Orientamento
+    pose.orientation.x = quaternion.x();
+    pose.orientation.y = quaternion.y();
+    pose.orientation.z = quaternion.z();
+    pose.orientation.w = quaternion.w();
+
+    return pose;
+
+  }
+
+  return std::nullopt;
+
+}
 
 }
