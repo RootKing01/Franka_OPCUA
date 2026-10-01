@@ -17,6 +17,8 @@ class FrankaBridgeNode : public rclcpp::Node
 public:
     explicit FrankaBridgeNode(const std::string & robot_id);
 
+    ~FrankaBridgeNode() override;
+
 private:
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr command_subscription_;
 

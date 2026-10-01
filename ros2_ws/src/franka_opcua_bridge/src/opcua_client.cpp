@@ -65,7 +65,11 @@ bool OpcuaClient::connect()
   client_ = UA_Client_new();
 
   //configurazione timeout/buffer di default
-  UA_ClientConfig_setDefault(UA_Client_getConfig(client_));
+  UA_ClientConfig *config = UA_Client_getConfig(client_);
+
+  UA_ClientConfig_setDefault(config);
+
+  config->timeout = 10000;
 
   env_password = getenv("FRANKA_PASS");
 
@@ -171,9 +175,12 @@ CallResult OpcuaClient::callMethod(
 
   if (status != UA_STATUSCODE_GOOD)
   {
+    std::cout << "[OPCUA] UA_Client_call failed: " << UA_StatusCode_name(status) << "(" << status << ")" << std::endl;
+
     UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     UA_NodeId_clear(&object_id);
     UA_NodeId_clear(&method_id);
+
     return CallResult{};
   } 
 

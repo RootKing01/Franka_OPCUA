@@ -39,6 +39,15 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
         this->get_logger(),
         "Connessione OPC UA stabilita");
 
+    if (!franka_->requestControl(true))
+    {
+        RCLCPP_ERROR(this->get_logger(), "Richiesta del controllo fallita");
+        franka_->disconnect();
+        throw std::runtime_error("Impossibile ottenere il controllo del robot");
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Controllo del robot ottenuto");
+
     // Topic dei comandi
     const std::string topic_name =
         "/franka_" + robot_id + "/command";
@@ -173,6 +182,16 @@ void FrankaBridgeNode::commandCallback(
     }
 }
 
+FrankaBridgeNode::~FrankaBridgeNode()
+{
+    if (franka_ && franka_->isConnected())
+    {
+        franka_->releaseControl();
+        franka_->disconnect();
+    }
+}
+
+
 }  // namespace franka_opcua_bridge
 
 
@@ -180,10 +199,18 @@ int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
 
-    auto node =
-        std::make_shared<franka_opcua_bridge::FrankaBridgeNode>("right");
+    try{
+        
+        auto node = std::make_shared<franka_opcua_bridge::FrankaBridgeNode>("right");
 
-    rclcpp::spin(node);
+        rclcpp::spin(node);
+        
+    }catch(const std::exception & e){
+        
+        RCLCPP_ERROR(rclcpp::get_logger("franka_opcua_bridge"), "Avvio fallito: %s", e.what());
+        rclcpp::shutdown();
+        return 1;
+    }
 
     rclcpp::shutdown();
 
