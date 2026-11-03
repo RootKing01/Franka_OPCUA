@@ -1,10 +1,15 @@
 #include "franka_opcua_bridge/franka_bridge_node.hpp"
 
 #include "franka_opcua_bridge/opcua_client.hpp"
+#include "franka_opcua_bridge/franka_robot.hpp"
 
 #include <functional>
 #include <memory>
 #include <string>
+#include <atomic>
+#include <cstdint>
+#include <inttypes.h>
+#include <chrono>
 
 namespace franka_opcua_bridge
 {
@@ -21,34 +26,21 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
   auto client = std::make_unique<OpcuaClient>();
 
   // Creazione astrazione Franka
-  franka_ = std::make_unique<FrankaRobot>(
-    std::move(client));
+  auto robot = std::make_unique<FrankaRobot>(std::move(client));
 
-  // Connessione al robot
-  if (!franka_->connect()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "Connessione al robot fallita");
+  //Creazione del worker
+  worker_ = std::make_unique<OpcuaWorker>(std::move(robot), 5);
 
-    throw std::runtime_error(
-            "Impossibile connettersi al robot tramite OPC UA");
-  }
+  //Avvio del worker
+  if (!worker_->start()) {
 
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Connessione OPC UA stabilita");
-
-  if (!franka_->requestControl(true)) {
-    RCLCPP_ERROR(this->get_logger(), "Richiesta del controllo fallita");
-    franka_->disconnect();
-    throw std::runtime_error("Impossibile ottenere il controllo del robot");
+    throw std::runtime_error("Avvio del worker fallito");
   }
 
   RCLCPP_INFO(this->get_logger(), "Controllo del robot ottenuto");
 
   // Topic dei comandi
-  const std::string topic_name =
-    "/franka_" + robot_id + "/command";
+  const std::string topic_name = "/franka_" + robot_id + "/command";
 
   command_subscription_ =
     this->create_subscription<std_msgs::msg::String>(
@@ -66,9 +58,55 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 }
 
 
-void FrankaBridgeNode::commandCallback(
-  const std_msgs::msg::String::SharedPtr msg)
+void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr msg)
 {
+  auto enqueueCommand = [this](FrankaCommandType type, const std::string & parameter = "") {
+
+      FrankaRobotCommand robot_command;
+      robot_command.command_id = next_command_id_.fetch_add(1);
+      robot_command.type = type;
+      robot_command.parameter = parameter;
+      robot_command.created_at = std::chrono::steady_clock::now();
+
+      const auto command_id = robot_command.command_id;
+
+      if (worker_->enqueueCommand(std::move(robot_command))) {
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Comando %lu accodato",
+          command_id);
+      } else {
+        RCLCPP_ERROR(
+          this->get_logger(),
+          "Comando %lu rifiutato dal worker",
+          command_id);
+      }
+    };
+
+    auto enqueuePriority = [this](FrankaCommandType type, const std::string & parameter = "") {
+
+      FrankaRobotCommand robot_command;
+      robot_command.command_id = next_command_id_.fetch_add(1);
+      robot_command.type = type;
+      robot_command.parameter = parameter;
+      robot_command.created_at = std::chrono::steady_clock::now();
+
+      const auto command_id = robot_command.command_id;
+
+      if (worker_->enqueuePriority(std::move(robot_command))) {
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Comando %lu accodato",
+          command_id);
+      } else {
+        RCLCPP_ERROR(
+          this->get_logger(),
+          "Comando %lu rifiutato dal worker",
+          command_id);
+      }
+    };
+
+
   RCLCPP_INFO(
     this->get_logger(),
     "Comando ricevuto: '%s'",
@@ -77,76 +115,39 @@ void FrankaBridgeNode::commandCallback(
   const std::string command = msg->data;
 
   if (command == "open_brakes") {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Richiesta: apertura freni");
 
-    if (franka_->openBrakes()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Freni aperti correttamente");
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Errore nell'apertura dei freni");
-    }
+    enqueueCommand(FrankaCommandType::OpenBrakes);
+
   } else if (command == "close_brakes") {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Richiesta: chiusura freni");
 
-    if (franka_->closeBrakes()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Freni chiusi correttamente");
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Errore nella chiusura dei freni");
-    }
+    enqueueCommand(FrankaCommandType::CloseBrakes);
+
   } else if (command == "activate_FCI") {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Richiesta: attivazione FCI");
 
-    if (franka_->activateFCI()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "FCI attivato correttamente");
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Errore nell'attivazione FCI");
-    }
+    enqueueCommand(FrankaCommandType::ActivateFci);
+
   } else if (command == "deactivate_FCI") {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Richiesta: disattivazione FCI");
 
-    if (franka_->deactivateFCI()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "FCI disattivato correttamente");
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Errore nella disattivazione FCI");
-    }
+    enqueueCommand(FrankaCommandType::DeactivateFci);
+
   } else if (command == "stop") {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "Richiesta: stop");
 
-    if (franka_->stop()) {
-      RCLCPP_INFO(
+    enqueuePriority(FrankaCommandType::Stop);
+
+  } else if (command.rfind("move_to_pose:", 0) == 0) {
+
+    const std::string pose_id = command.substr(std::string("move_to_pose:").size());
+
+    if (pose_id.empty()) {
+      RCLCPP_WARN(
         this->get_logger(),
-        "Stop eseguito correttamente");
+        "Nome della posa mancante");
     } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Errore durante lo stop");
+      enqueueCommand(FrankaCommandType::MoveToNamedPose, pose_id);
     }
+
   } else {
+
     RCLCPP_WARN(
       this->get_logger(),
       "Comando non riconosciuto: '%s'",
@@ -156,9 +157,8 @@ void FrankaBridgeNode::commandCallback(
 
 FrankaBridgeNode::~FrankaBridgeNode()
 {
-  if (franka_ && franka_->isConnected()) {
-    franka_->releaseControl();
-    franka_->disconnect();
+  if (worker_) {
+    worker_->stop();
   }
 }
 

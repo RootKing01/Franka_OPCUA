@@ -1,180 +1,214 @@
 #include "franka_opcua_bridge/opcua_worker.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <stdexcept>
 
-namespace franka_opcua_bridge{
+namespace franka_opcua_bridge
+{
+
+namespace
+{
+
+rclcpp::Logger workerLogger()
+{
+  return rclcpp::get_logger("franka_opcua_worker");
+}
+
+}  // namespace
 
 OpcuaWorker::OpcuaWorker(std::unique_ptr<IFranka> robot, std::size_t command_capacity)
 : franka_(std::move(robot)),
   command_manager_(command_capacity),
-  worker_state_(WorkerStatus::Disconnected){
-    if(franka_ == nullptr) throw std::invalid_argument("Robot cannot be null");
+  worker_state_(WorkerStatus::Disconnected)
+{
+  if (franka_ == nullptr) {throw std::invalid_argument("Robot cannot be null");}
+}
+
+
+OpcuaWorker::~OpcuaWorker()
+{
+  stop();
+}
+
+bool OpcuaWorker::start()
+{
+
+  RCLCPP_INFO(workerLogger(), "Avvio worker richiesto");
+
+  if (worker_thread_.joinable()) {
+    RCLCPP_WARN(workerLogger(), "Avvio rifiutato: thread worker gia' attivo");
+    return false;
   }
 
+  std::unique_lock<std::mutex> lock(mutex_);
 
-OpcuaWorker::~OpcuaWorker(){
-    stop();
+  if (worker_state_ != WorkerStatus::Disconnected) {
+    RCLCPP_WARN(workerLogger(), "Avvio rifiutato: worker non disconnesso");
+    return false;
+  }
+
+  worker_state_ = WorkerStatus::Connecting;
+
+  lock.unlock();
+
+  worker_thread_ = std::thread(
+    [this]() {
+      run();
+    });
+
+  lock.lock();
+
+  state_condition_.wait(
+    lock, [this] {
+      return worker_state_ == WorkerStatus::Ready ||
+      worker_state_ == WorkerStatus::Error ||
+      worker_state_ == WorkerStatus::Stopping ||
+      worker_state_ == WorkerStatus::Disconnected;
+    });
+
+
+  if (worker_state_ == WorkerStatus::Ready) {
+    RCLCPP_INFO(workerLogger(), "Worker pronto");
+    lock.unlock();
+    return true;
+  }
+
+  if (worker_state_ == WorkerStatus::Error) {
+
+    RCLCPP_ERROR(workerLogger(), "Worker non avviato: errore durante la connessione o il controllo");
+    lock.unlock();
+    worker_thread_.join();
+    return false;
+  }
+
+  return false;
+
 }
 
-bool OpcuaWorker::start(){
+void OpcuaWorker::stop()
+{
 
-    if( worker_thread_.joinable()) return false;
-    
+  if ((worker_thread_.joinable())) {
+
+    RCLCPP_INFO(workerLogger(), "Arresto worker richiesto");
+
     std::unique_lock<std::mutex> lock(mutex_);
-
-    if( worker_state_ != WorkerStatus::Disconnected ) return false;
-
-    worker_state_ = WorkerStatus::Connecting;
-
+    worker_state_ = WorkerStatus::Stopping;
     lock.unlock();
 
-    worker_thread_ = std::thread([this](){
-        run();
-    });
+    command_manager_.shutdown();
+
+    worker_thread_.join();
 
     lock.lock();
+    worker_state_ = WorkerStatus::Disconnected;
+    lock.unlock();
 
-    state_condition_.wait(lock, [this]{
-        return worker_state_ == WorkerStatus::Ready  || 
-               worker_state_ == WorkerStatus::Error ||
-               worker_state_ == WorkerStatus::Stopping ||
-               worker_state_ == WorkerStatus::Disconnected;
-    });
+    result_condition_.notify_all();
 
+    RCLCPP_INFO(workerLogger(), "Worker arrestato e disconnesso");
 
-    if( worker_state_ == WorkerStatus::Ready)
-    {
-        lock.unlock();
-        return true;
-    } 
+  }
 
-    if( worker_state_ == WorkerStatus::Error){
-        
-        lock.unlock();
-        worker_thread_.join();
-        return false;
-    }
+}
 
+bool OpcuaWorker::enqueueCommand(FrankaRobotCommand command)
+{
+
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  if (worker_state_ != WorkerStatus::Ready) {
+
+    RCLCPP_WARN(
+      workerLogger(), "Comando %lu rifiutato: worker non pronto",
+      static_cast<unsigned long>(command.command_id));
+    lock.unlock();
     return false;
+  }
+
+  lock.unlock();
+  const bool accepted = command_manager_.enqueue(command);
+  if (!accepted) {
+    RCLCPP_WARN(
+      workerLogger(), "Comando %lu rifiutato: coda piena o in shutdown",
+      static_cast<unsigned long>(command.command_id));
+  }
+  return accepted;
 
 }
 
-void OpcuaWorker::stop(){
+bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command){
 
-    if((worker_thread_.joinable())){
-
-        std::unique_lock<std::mutex> lock(mutex_);
-        worker_state_ = WorkerStatus::Stopping;
-        lock.unlock();
-
-        command_manager_.shutdown();
-
-        worker_thread_.join();
-
-        lock.lock();
-        worker_state_ = WorkerStatus::Disconnected;
-        lock.unlock();
-
-        result_condition_.notify_all();
-
-    }
-
+  const auto command_id = command.command_id;
+  const bool accepted = command_manager_.enqueuePriority(std::move(command));
+  if (!accepted) {
+    RCLCPP_WARN(
+    workerLogger(), "Comando prioritario %lu rifiutato: coda piena o in shutdown",
+    static_cast<unsigned long>(command_id));
+  }
+  return accepted;
 }
 
-bool OpcuaWorker::enqueueCommand(FrankaRobotCommand command){
 
+void OpcuaWorker::run()
+{
+
+  RCLCPP_INFO(workerLogger(), "Connessione al robot OPC UA in corso");
+
+  // Connessione al robot
+  if (!franka_->connect()) {
+    RCLCPP_ERROR(workerLogger(), "Connessione al robot OPC UA fallita");
     std::unique_lock<std::mutex> lock(mutex_);
-    
-    if(worker_state_ != WorkerStatus::Ready){
-        
-        lock.unlock();
-        return false;
+    if (worker_state_ != WorkerStatus::Stopping) {
+      worker_state_ = WorkerStatus::Error;
     }
-
     lock.unlock();
-    return command_manager_.enqueue(command);
 
-}
-
-
-void OpcuaWorker::run(){
-
-    // Connessione al robot
-    if (!franka_->connect()) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        if (worker_state_ != WorkerStatus::Stopping) {
-            worker_state_ = WorkerStatus::Error;
-        }
-        lock.unlock();
-        
-        state_condition_.notify_one();
-        result_condition_.notify_all();
-        return;
-    }
-
-    bool stopping = false;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        stopping = worker_state_ == WorkerStatus::Stopping;
-    }
-
-    if (stopping) {
-        franka_->disconnect();
-
-        std::lock_guard<std::mutex> lock(mutex_);
-        worker_state_ = WorkerStatus::Disconnected;
-        state_condition_.notify_all();
-        result_condition_.notify_all();
-        return;
-    }
-
-    if (!franka_->requestControl(true)) {
-    
-        franka_->disconnect();
-        
-        std::unique_lock<std::mutex> lock(mutex_);
-        if (worker_state_ != WorkerStatus::Stopping) {
-            worker_state_ = WorkerStatus::Error;
-        }
-        lock.unlock();
-        
-        state_condition_.notify_one();
-        result_condition_.notify_all();
-        return;
-    }
-
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (worker_state_ == WorkerStatus::Stopping) {
-        lock.unlock();
-        franka_->releaseControl();
-        franka_->disconnect();
-
-        lock.lock();
-        worker_state_ = WorkerStatus::Disconnected;
-        lock.unlock();
-
-        state_condition_.notify_all();
-        result_condition_.notify_all();
-        return;
-    }
-
-    worker_state_ = WorkerStatus::Ready;
-    lock.unlock();
     state_condition_.notify_one();
-    
+    result_condition_.notify_all();
+    return;
+  }
 
-    while(true)
-    {
-        auto command = command_manager_.waitAndPop();
+  bool stopping = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    stopping = worker_state_ == WorkerStatus::Stopping;
+  }
 
-        if( !command){
-            break; //shutdown
-        }
+  if (stopping) {
 
-        auto result = executeCommand(*command);
-        pushResult(std::move(result));
+    RCLCPP_WARN(workerLogger(), "Arresto richiesto durante la connessione");
+    franka_->disconnect();
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    worker_state_ = WorkerStatus::Disconnected;
+    state_condition_.notify_all();
+    result_condition_.notify_all();
+    return;
+  }
+
+  if (!franka_->requestControl(true)) {
+
+    RCLCPP_ERROR(workerLogger(), "Acquisizione del control token fallita");
+
+    franka_->disconnect();
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (worker_state_ != WorkerStatus::Stopping) {
+      worker_state_ = WorkerStatus::Error;
     }
-    
+    lock.unlock();
+
+    state_condition_.notify_one();
+    result_condition_.notify_all();
+    return;
+  }
+
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (worker_state_ == WorkerStatus::Stopping) {
+    RCLCPP_WARN(workerLogger(), "Arresto richiesto durante l'acquisizione del control token");
+    lock.unlock();
     franka_->releaseControl();
     franka_->disconnect();
 
@@ -184,125 +218,182 @@ void OpcuaWorker::run(){
 
     state_condition_.notify_all();
     result_condition_.notify_all();
-}
+    return;
+  }
+
+  worker_state_ = WorkerStatus::Ready;
+  lock.unlock();
+  state_condition_.notify_one();
+
+  RCLCPP_INFO(workerLogger(), "Control token acquisito: worker pronto a eseguire comandi");
 
 
-FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & command){
+  while (true) {
+    auto command = command_manager_.waitAndPop();
 
-    FrankaCommandResult result;
-    result.command_id = command.command_id;
-    result.status = FrankaCommandStatus::Rejected;
-
-    bool success = false;
-    std::string message;
-
-    switch(command.type){
-
-        case FrankaCommandType::OpenBrakes:
-            success = franka_->openBrakes();
-            message = success ? "Brakes opened" : "Failed to open brakes";
-            break;
-        
-        case FrankaCommandType::CloseBrakes:
-            success = franka_->closeBrakes();
-            message = success ? "Brakes closed" : "Failed to close brakes";
-            break;
-
-        case FrankaCommandType::Stop:
-            success = franka_->stop();
-            message = success ? "Robot stopped" : "Failed to stop robot";
-            break;
-
-        case FrankaCommandType::ExecuteNamedTask:
-            success = franka_->executeNamedTask(command.parameter);
-            message = success ? "Task executed" : "Failed to execute task";
-            break;
-
-        case FrankaCommandType::MoveToNamedPose:
-            success = franka_->moveToNamedPose(command.parameter);
-            message = success ? "Pose reached" : "Failed to reach pose";
-            break;
-        
-        case FrankaCommandType::ActivateFci:
-            success = franka_->activateFCI();
-            message = success ? "FCI activated" : "Failed to activate FCI";
-            break;
-
-        case FrankaCommandType::DeactivateFci:
-            success = franka_->deactivateFCI();
-            message = success ? "FCI deactivated" : "Failed to deactivate FCI";
-            break;
-        
-        default:
-            result.status = FrankaCommandStatus::Rejected;
-            result.finished_at = std::chrono::steady_clock::now();
-            result.message = "Unknown command type";
-            return result;
+    if (!command) {
+      RCLCPP_INFO(workerLogger(), "Shutdown della coda ricevuto");
+      break;       //shutdown
     }
 
-    result.status = success ? FrankaCommandStatus::Completed : FrankaCommandStatus::Failed;
-    result.finished_at = std::chrono::steady_clock::now();
-    result.message = message;
+    RCLCPP_INFO(
+      workerLogger(), "Esecuzione comando %lu, tipo %d, parametro '%s'",
+      static_cast<unsigned long>(command->command_id),
+      static_cast<int>(command->type),
+      command->parameter.c_str());
 
-    return result;
+    auto result = executeCommand(*command);
+    RCLCPP_INFO(
+      workerLogger(), "Comando %lu terminato con stato %d: %s",
+      static_cast<unsigned long>(result.command_id),
+      static_cast<int>(result.status),
+      result.message.c_str());
+    pushResult(std::move(result));
+  }
+
+  RCLCPP_INFO(workerLogger(), "Rilascio control token e disconnessione dal robot");
+  franka_->releaseControl();
+  franka_->disconnect();
+
+  lock.lock();
+  worker_state_ = WorkerStatus::Disconnected;
+  lock.unlock();
+
+  state_condition_.notify_all();
+  result_condition_.notify_all();
+}
+
+
+FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & command)
+{
+
+  RCLCPP_DEBUG(
+    workerLogger(), "Dispatch comando %lu",
+    static_cast<unsigned long>(command.command_id));
+
+  FrankaCommandResult result;
+  result.command_id = command.command_id;
+  result.status = FrankaCommandStatus::Rejected;
+
+  bool success = false;
+  std::string message;
+
+  switch (command.type) {
+
+    case FrankaCommandType::OpenBrakes:
+      success = franka_->openBrakes();
+      message = success ? "Brakes opened" : "Failed to open brakes";
+      break;
+
+    case FrankaCommandType::CloseBrakes:
+      success = franka_->closeBrakes();
+      message = success ? "Brakes closed" : "Failed to close brakes";
+      break;
+
+    case FrankaCommandType::Stop:
+      success = franka_->stop();
+      message = success ? "Robot stopped" : "Failed to stop robot";
+      break;
+
+    case FrankaCommandType::ExecuteNamedTask:
+      success = franka_->executeNamedTask(command.parameter);
+      message = success ? "Task executed" : "Failed to execute task";
+      break;
+
+    case FrankaCommandType::MoveToNamedPose:
+      success = franka_->moveToNamedPose(command.parameter);
+      message = success ? "Pose reached" : "Failed to reach pose";
+      break;
+
+    case FrankaCommandType::ActivateFci:
+      success = franka_->activateFCI();
+      message = success ? "FCI activated" : "Failed to activate FCI";
+      break;
+
+    case FrankaCommandType::DeactivateFci:
+      success = franka_->deactivateFCI();
+      message = success ? "FCI deactivated" : "Failed to deactivate FCI";
+      break;
+
+    default:
+      result.status = FrankaCommandStatus::Rejected;
+      result.finished_at = std::chrono::steady_clock::now();
+      result.message = "Unknown command type";
+      return result;
+  }
+
+  result.status = success ? FrankaCommandStatus::Completed : FrankaCommandStatus::Failed;
+  result.finished_at = std::chrono::steady_clock::now();
+  result.message = message;
+
+  if (!success) {
+    RCLCPP_ERROR(
+      workerLogger(), "Comando %lu fallito: %s",
+      static_cast<unsigned long>(command.command_id), message.c_str());
+  }
+
+  return result;
 
 }
 
 
-void OpcuaWorker::pushResult(FrankaCommandResult result){
+void OpcuaWorker::pushResult(FrankaCommandResult result)
+{
 
-    std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
-    result_queue_.push(std::move(result));
+  result_queue_.push(std::move(result));
 
-    result_condition_.notify_one();
+  result_condition_.notify_one();
 }
 
-std::optional<FrankaCommandResult> OpcuaWorker::tryGetResult(){
-    
-    std::lock_guard<std::mutex> lock(mutex_);
+std::optional<FrankaCommandResult> OpcuaWorker::tryGetResult()
+{
 
-    if( result_queue_.empty()) return std::nullopt;
+  std::lock_guard<std::mutex> lock(mutex_);
 
-    FrankaCommandResult result = std::move(result_queue_.front());
+  if (result_queue_.empty()) {return std::nullopt;}
 
-    result_queue_.pop();
+  FrankaCommandResult result = std::move(result_queue_.front());
 
-    return result;
+  result_queue_.pop();
+
+  return result;
 }
 
-std::optional<FrankaCommandResult> OpcuaWorker::waitAndPopResult(){
+std::optional<FrankaCommandResult> OpcuaWorker::waitAndPopResult()
+{
 
-    std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
 
-    result_condition_.wait(lock, [this]{
-        return !result_queue_.empty() || worker_state_ == WorkerStatus::Disconnected
-                                      || worker_state_ == WorkerStatus::Error;
+  result_condition_.wait(
+    lock, [this] {
+      return !result_queue_.empty() || worker_state_ == WorkerStatus::Disconnected ||
+      worker_state_ == WorkerStatus::Error;
     });
 
-    if( result_queue_.empty()) return std::nullopt;
+  if (result_queue_.empty()) {return std::nullopt;}
 
-    FrankaCommandResult result = std::move(result_queue_.front());
+  FrankaCommandResult result = std::move(result_queue_.front());
 
-    result_queue_.pop();
+  result_queue_.pop();
 
-    return result;
-
-}
-
-
-WorkerStatus OpcuaWorker::status() const{
-
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    WorkerStatus state = worker_state_;
-
-    return state;
-
+  return result;
 
 }
 
 
+WorkerStatus OpcuaWorker::status() const
+{
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  WorkerStatus state = worker_state_;
+
+  return state;
+
+
+}
 
 
 }

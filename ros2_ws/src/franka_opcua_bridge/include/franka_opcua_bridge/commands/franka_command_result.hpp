@@ -24,12 +24,13 @@ enum class FrankaCommandStatus
 };
 
 
-struct FrankaCommandResult{
+struct FrankaCommandResult
+{
 
-    std::uint64_t command_id;
-    FrankaCommandStatus status;
-    std::string message;
-    std::chrono::steady_clock::time_point finished_at;
+  std::uint64_t command_id;
+  FrankaCommandStatus status;
+  std::string message;
+  std::chrono::steady_clock::time_point finished_at;
 
 };
 

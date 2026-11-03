@@ -8,32 +8,37 @@
 #include <condition_variable>
 #include <optional>
 
-namespace franka_opcua_bridge{
+namespace franka_opcua_bridge
+{
 
-class FrankaCommandManager{
+class FrankaCommandManager
+{
 
 public:
+  explicit FrankaCommandManager(std::size_t capacity);
 
-    explicit FrankaCommandManager(std::size_t capacity);
+  bool enqueue(FrankaRobotCommand command);
+  bool enqueuePriority(FrankaRobotCommand command);
 
-    bool enqueue(FrankaRobotCommand command);
+  std::optional<FrankaRobotCommand> waitAndPop();
+  std::optional<FrankaRobotCommand> tryPop();
 
-    std::optional<FrankaRobotCommand> waitAndPop();
-    std::optional<FrankaRobotCommand> tryPop();
+  void shutdown();
+  bool isShutdown() const;
 
-    void shutdown();
-    bool isShutdown() const;
+  std::size_t size() const;
+  std::size_t prioritySize() const;
 
-    std::size_t size() const;
-    bool empty() const;
+  bool empty() const;
+  bool priorityEmpty() const;
 
 private:
-    
-    std::queue<FrankaRobotCommand> command_queue;
-    mutable std::mutex mutex_;
-    std::size_t capacity_;
-    bool shutdown_requested_ = false;
-    std::condition_variable condition_;
+  std::queue<FrankaRobotCommand> command_queue;
+  std::queue<FrankaRobotCommand> priority_queue;
+  mutable std::mutex mutex_;
+  std::size_t capacity_;
+  bool shutdown_requested_ = false;
+  std::condition_variable condition_;
 
 };
 

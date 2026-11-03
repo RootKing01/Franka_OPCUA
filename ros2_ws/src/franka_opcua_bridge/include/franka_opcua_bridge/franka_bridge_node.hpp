@@ -24,6 +24,8 @@ private:
 
   std::unique_ptr<OpcuaWorker> worker_;
 
+  std::atomic<std::uint64_t> next_command_id_{1};
+
   void commandCallback(
     const std_msgs::msg::String::SharedPtr msg);
 };

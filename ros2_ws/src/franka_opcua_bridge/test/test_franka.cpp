@@ -1,4 +1,8 @@
 #include <gtest/gtest.h>
+#include <cmath>
+
+#include <Eigen/Dense>
+
 #include "franka_opcua_bridge/franka_robot.hpp"
 #include "franka_opcua_bridge/fake_test_version/fake_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
@@ -7,6 +11,8 @@ using franka_opcua_bridge::FrankaRobot;
 using franka_opcua_bridge::FakeProtocolClient;
 using franka_opcua_bridge::Value;
 using franka_opcua_bridge::FrankaRobotStatus;
+using franka_opcua_bridge::ExecutionStatusValue;
+using franka_opcua_bridge::KeyPosePairValue;
 
 
 TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
@@ -227,27 +233,27 @@ TEST(FrankaRobotTest, ReadStatuCallsCorrectMethod) {
   bool success = robot.connect();
   ASSERT_TRUE(success);
 
-  Value::Struct fields;
-  fields["HasError"] = Value(false);
-  fields["IsRunning"] = Value(true);
-  fields["ErrorMessage"] = Value(std::string(""));
-  fields["ActiveTaskName"] = Value(std::string("opcua_goto"));
-  fields["ActiveTaskId"] = Value(std::string("task_0"));
+  const ExecutionStatusValue expected_status{
+    false,
+    true,
+    "",
+    "opcua_goto",
+    "task_0"};
 
-  bool writeSuccess = fake_ptr->writeValue(path_, Value(fields));
+  bool writeSuccess = fake_ptr->writeValue(path_, Value(expected_status));
   ASSERT_TRUE(writeSuccess);
 
   auto status = robot.readStatus();
 
-  EXPECT_EQ(status->has_error, fields["HasError"].as<bool>());
-  EXPECT_EQ(status->is_running, fields["IsRunning"].as<bool>());
-  EXPECT_EQ(status->error_message, fields["ErrorMessage"].as<std::string>());
-  EXPECT_EQ(status->active_task_name, fields["ActiveTaskName"].as<std::string>());
+  EXPECT_EQ(status->has_error, expected_status.has_error);
+  EXPECT_EQ(status->is_running, expected_status.is_running);
+  EXPECT_EQ(status->error_message, expected_status.error_message);
+  EXPECT_EQ(status->active_task_name, expected_status.active_task_name);
 
   auto franka_status = dynamic_cast<FrankaRobotStatus *>(status.get());
   ASSERT_NE(franka_status, nullptr);
 
-  EXPECT_EQ(franka_status->active_task_id, fields["ActiveTaskId"].as<std::string>());
+  EXPECT_EQ(franka_status->active_task_id, expected_status.active_task_id);
 
 }
 
@@ -351,14 +357,99 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
   bool success = robot.connect();
   ASSERT_TRUE(success);
 
+  const std::vector<double> received_pose{
+    0.0, 1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.4, -0.2, 0.6, 1.0};
+
   fake_ptr->writeValue(
     variable_browse_path, Value(
-      std::vector<double>(
-        {1.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0,
-          34.0, 55.0, 89.0, 144.0, 3.0, 5.0, 8.0, 13.0})) );
+      received_pose) );
+
+  fake_ptr->writeValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
 
   bool movePoseSuccess = robot.moveToNamedPose(pose_id);
   ASSERT_TRUE(movePoseSuccess);
+
+  const auto & log = fake_ptr->callLog();
+  ASSERT_EQ(log.size(), 3u);
+  EXPECT_EQ(log[0].method_name, "Read");
+  EXPECT_EQ(log[1].method_name, "Replace");
+  ASSERT_EQ(log[1].args.size(), 1u);
+  ASSERT_TRUE(log[1].args[0].is<KeyPosePairValue>());
+
+  const auto & target_pose = log[1].args[0].as<KeyPosePairValue>();
+  EXPECT_EQ(target_pose.key, "target_pose");
+  ASSERT_EQ(target_pose.value.size(), 16u);
+
+  for (const double value : target_pose.value) {
+    EXPECT_TRUE(std::isfinite(value));
+  }
+
+  const Eigen::Map<const Eigen::Matrix4d> matrix(target_pose.value.data());
+  const Eigen::Matrix3d rotation = matrix.block<3, 3>(0, 0);
+
+  EXPECT_NEAR(matrix(3, 0), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 1), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 2), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 3), 1.0, 1e-12);
+  EXPECT_NEAR((rotation.transpose() * rotation - Eigen::Matrix3d::Identity()).norm(), 0.0, 1e-12);
+  EXPECT_GT(rotation.determinant(), 0.0);
+
+  constexpr double kCartesianLimit = 1.0;
+  EXPECT_LE(std::abs(matrix(0, 3)), kCartesianLimit);
+  EXPECT_LE(std::abs(matrix(1, 3)), kCartesianLimit);
+  EXPECT_GE(matrix(2, 3), 0.0);
+  EXPECT_LE(matrix(2, 3), kCartesianLimit);
+
+  EXPECT_NEAR(matrix(0, 3), 0.4, 1e-12);
+  EXPECT_NEAR(matrix(1, 3), -0.2, 1e-12);
+  EXPECT_NEAR(matrix(2, 3), 0.6, 1e-12);
+  EXPECT_EQ(target_pose.value, received_pose);
+  EXPECT_EQ(log[2].method_name, "StartTask");
+
+}
+
+
+TEST(FrankaRobotTest, SavePoseConvertsToColumnMajorMatrix)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  FrankaRobot robot(std::move(fake_client));
+
+  ASSERT_TRUE(robot.connect());
+
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = 0.4;
+  pose.position.y = -0.2;
+  pose.position.z = 0.6;
+  pose.orientation.w = std::sqrt(0.5);
+  pose.orientation.z = std::sqrt(0.5);
+
+  ASSERT_TRUE(robot.savePose("p_test", pose));
+
+  const auto & log = fake_ptr->callLog();
+  ASSERT_EQ(log.size(), 1u);
+  EXPECT_EQ(log[0].method_name, "Replace");
+  ASSERT_EQ(log[0].args.size(), 1u);
+  ASSERT_TRUE(log[0].args[0].is<KeyPosePairValue>());
+
+  const auto & saved_pose = log[0].args[0].as<KeyPosePairValue>();
+  EXPECT_EQ(saved_pose.key, "p_test");
+  ASSERT_EQ(saved_pose.value.size(), 16u);
+
+  const std::vector<double> expected_matrix{
+    0.0, 1.0, 0.0, 0.0,
+    -1.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.4, -0.2, 0.6, 1.0};
+
+  for (std::size_t index = 0; index < expected_matrix.size(); ++index) {
+    EXPECT_NEAR(saved_pose.value[index], expected_matrix[index], 1e-12);
+  }
 
 }
 

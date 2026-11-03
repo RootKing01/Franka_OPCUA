@@ -332,7 +332,29 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   }
 
   // Avvia il task che utilizza target_pose
-  return executeNamedTask("opcua_goto");
+  if (!executeNamedTask("opcua_goto")) {
+    return false;
+  }
+
+  constexpr auto kExecutionTimeout = std::chrono::seconds(60);
+  constexpr auto kPollingPeriod = std::chrono::milliseconds(100);
+  const auto deadline = std::chrono::steady_clock::now() + kExecutionTimeout;
+
+  while (std::chrono::steady_clock::now() < deadline) {
+    const auto status = readStatus();
+
+    if (!status || status->has_error) {
+      return false;
+    }
+
+    if (!status->is_running) {
+      return true;
+    }
+
+    std::this_thread::sleep_for(kPollingPeriod);
+  }
+
+  return false;
 }
 
 std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose & pose)
