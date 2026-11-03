@@ -3,6 +3,8 @@
 
 #include "franka_opcua_bridge/interfaces/i_robot.hpp"
 
+#include <functional>
+
 namespace franka_opcua_bridge
 {
 
@@ -14,7 +16,9 @@ public:
   virtual bool releaseControl() = 0;
 
   virtual bool executeNamedTask(const std::string & task_id) = 0;
-  virtual bool moveToNamedPose(const std::string & pose_id) = 0;
+  virtual bool moveToNamedPose(
+    const std::string & pose_id,
+    const std::function<bool()> & should_abort = {}) = 0;
 
   virtual bool stop() = 0;
 

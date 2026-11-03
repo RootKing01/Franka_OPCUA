@@ -3,6 +3,8 @@
 
 #include "franka_opcua_bridge/interfaces/i_franka.hpp"
 
+#include <functional>
+
 namespace franka_opcua_bridge
 {
 
@@ -19,7 +21,9 @@ public:
   bool areBrakesOpen() {return brakes_open_;}
   bool stop() override;
   bool executeNamedTask(const std::string & task_id) override;
-  bool moveToNamedPose(const std::string & pose_id) override;
+  bool moveToNamedPose(
+    const std::string & pose_id,
+    const std::function<bool()> & should_abort = {}) override;
 
   bool activateFCI() override;
   bool deactivateFCI() override;

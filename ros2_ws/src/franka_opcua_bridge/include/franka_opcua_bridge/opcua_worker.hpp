@@ -3,6 +3,7 @@
 
 
 #include "franka_opcua_bridge/interfaces/i_franka.hpp"
+#include "franka_opcua_bridge/interfaces/i_pose_storage.hpp"
 #include "franka_opcua_bridge/commands/franka_command_manager.hpp"
 #include "franka_opcua_bridge/commands/franka_command_result.hpp"
 
@@ -13,6 +14,7 @@
 #include <condition_variable>
 #include <optional>
 #include <cstddef>
+#include <atomic>
 
 namespace franka_opcua_bridge
 {
@@ -33,7 +35,10 @@ class OpcuaWorker
 {
 
 public:
-  OpcuaWorker(std::unique_ptr<IFranka> robot, std::size_t command_capacity);
+  OpcuaWorker(
+    std::unique_ptr<IFranka> robot,
+    IPoseStorage * pose_storage,
+    std::size_t command_capacity);
 
   ~OpcuaWorker();
 
@@ -50,6 +55,7 @@ public:
 
 private:
   std::unique_ptr<IFranka> franka_;
+  IPoseStorage * pose_storage_;
   FrankaCommandManager command_manager_;
   std::queue<FrankaCommandResult> result_queue_;
   mutable std::mutex mutex_;
@@ -57,6 +63,7 @@ private:
   std::condition_variable state_condition_;
   std::thread worker_thread_;
   WorkerStatus worker_state_;
+  std::atomic_bool abort_requested_{false};
 
 
   void run();

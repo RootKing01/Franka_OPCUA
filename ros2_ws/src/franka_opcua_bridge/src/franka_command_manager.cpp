@@ -33,7 +33,8 @@ bool FrankaCommandManager::enqueue(FrankaRobotCommand command)
 
 }
 
-bool FrankaCommandManager::enqueuePriority(FrankaRobotCommand command){
+bool FrankaCommandManager::enqueuePriority(FrankaRobotCommand command)
+{
 
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -61,16 +62,15 @@ std::optional<FrankaRobotCommand> FrankaCommandManager::waitAndPop()
       return !command_queue.empty() || !priority_queue.empty() || shutdown_requested_;
     });
 
-  if (shutdown_requested_) {return std::nullopt;}
-  
-  if(!priority_queue.empty())
-  {
+  if (!priority_queue.empty()) {
     FrankaRobotCommand command = std::move(priority_queue.front());
     priority_queue.pop();
 
     return command;
   }
-  
+
+  if (shutdown_requested_) {return std::nullopt;}
+
   FrankaRobotCommand command = std::move(command_queue.front());
   command_queue.pop();
 
@@ -84,22 +84,21 @@ std::optional<FrankaRobotCommand> FrankaCommandManager::tryPop()
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if(!priority_queue.empty())
-  {
+  if (!priority_queue.empty()) {
     auto command = std::move(priority_queue.front());
     priority_queue.pop();
 
     return command;
   }
 
- if (!command_queue.empty()) {
+  if (!command_queue.empty()) {
     auto command = std::move(command_queue.front());
     command_queue.pop();
-    
+
     return command;
   }
 
-return std::nullopt;
+  return std::nullopt;
 
 }
 
@@ -161,7 +160,5 @@ bool FrankaCommandManager::priorityEmpty() const
 
   return false;
 }
-
-
 
 }

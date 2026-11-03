@@ -17,8 +17,12 @@ rclcpp::Logger workerLogger()
 
 }  // namespace
 
-OpcuaWorker::OpcuaWorker(std::unique_ptr<IFranka> robot, std::size_t command_capacity)
+OpcuaWorker::OpcuaWorker(
+  std::unique_ptr<IFranka> robot,
+  IPoseStorage * pose_storage,
+  std::size_t command_capacity)
 : franka_(std::move(robot)),
+  pose_storage_(pose_storage),
   command_manager_(command_capacity),
   worker_state_(WorkerStatus::Disconnected)
 {
@@ -76,7 +80,9 @@ bool OpcuaWorker::start()
 
   if (worker_state_ == WorkerStatus::Error) {
 
-    RCLCPP_ERROR(workerLogger(), "Worker non avviato: errore durante la connessione o il controllo");
+    RCLCPP_ERROR(
+      workerLogger(),
+      "Worker non avviato: errore durante la connessione o il controllo");
     lock.unlock();
     worker_thread_.join();
     return false;
@@ -138,14 +144,29 @@ bool OpcuaWorker::enqueueCommand(FrankaRobotCommand command)
 
 }
 
-bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command){
+bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
+{
 
   const auto command_id = command.command_id;
+
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (worker_state_ != WorkerStatus::Ready) {
+    RCLCPP_WARN(
+      workerLogger(), "Comando prioritario %lu rifiutato: worker non pronto",
+      static_cast<unsigned long>(command_id));
+    return false;
+  }
+  lock.unlock();
+
+  const bool is_stop = command.type == FrankaCommandType::Stop;
   const bool accepted = command_manager_.enqueuePriority(std::move(command));
+  if (accepted && is_stop) {
+    abort_requested_.store(true);
+  }
   if (!accepted) {
     RCLCPP_WARN(
-    workerLogger(), "Comando prioritario %lu rifiutato: coda piena o in shutdown",
-    static_cast<unsigned long>(command_id));
+      workerLogger(), "Comando prioritario %lu rifiutato: coda piena o in shutdown",
+      static_cast<unsigned long>(command_id));
   }
   return accepted;
 }
@@ -291,6 +312,7 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       break;
 
     case FrankaCommandType::Stop:
+      abort_requested_.store(false);
       success = franka_->stop();
       message = success ? "Robot stopped" : "Failed to stop robot";
       break;
@@ -301,8 +323,21 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       break;
 
     case FrankaCommandType::MoveToNamedPose:
-      success = franka_->moveToNamedPose(command.parameter);
+      success = franka_->moveToNamedPose(
+        command.parameter,
+        [this]() {return abort_requested_.load();});
       message = success ? "Pose reached" : "Failed to reach pose";
+      break;
+
+    case FrankaCommandType::SaveCurrentPose:
+      success = pose_storage_ != nullptr && pose_storage_->savePose(command.parameter);
+      message = success ? "Pose saved" : "Failed to save pose";
+      break;
+
+    case FrankaCommandType::SaveExplicitPose:
+      success = pose_storage_ != nullptr && command.pose.has_value() &&
+        pose_storage_->savePose(command.parameter, command.pose.value());
+      message = success ? "Pose saved" : "Failed to save pose";
       break;
 
     case FrankaCommandType::ActivateFci:

@@ -10,9 +10,67 @@
 #include <cstdint>
 #include <inttypes.h>
 #include <chrono>
+#include <cmath>
+#include <optional>
+#include <sstream>
+#include <vector>
 
 namespace franka_opcua_bridge
 {
+
+namespace
+{
+
+bool parseExplicitPoseCommand(
+  const std::string & command,
+  std::string & pose_id,
+  geometry_msgs::msg::Pose & pose)
+{
+  constexpr const char * kPrefix = "save_pose:";
+  const std::string payload = command.substr(std::string(kPrefix).size());
+
+  std::stringstream stream(payload);
+  std::vector<std::string> fields;
+  std::string field;
+  while (std::getline(stream, field, ':')) {
+    fields.push_back(field);
+  }
+
+  if (fields.size() != 8 || fields[0].empty()) {
+    return false;
+  }
+
+  try {
+    double values[7];
+    for (std::size_t index = 0; index < 7; ++index) {
+      std::size_t parsed_characters = 0;
+      values[index] = std::stod(fields[index + 1], &parsed_characters);
+      if (parsed_characters != fields[index + 1].size()) {
+        return false;
+      }
+    }
+
+    for (const double value : values) {
+      if (!std::isfinite(value)) {
+        return false;
+      }
+    }
+
+    pose_id = fields[0];
+    pose.position.x = values[0];
+    pose.position.y = values[1];
+    pose.position.z = values[2];
+    pose.orientation.x = values[3];
+    pose.orientation.y = values[4];
+    pose.orientation.z = values[5];
+    pose.orientation.w = values[6];
+    return true;
+  } catch (const std::exception &) {
+    return false;
+  }
+}
+
+}  // namespace
 
 FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 : Node("franka_" + robot_id + "_opcua_bridge")
@@ -27,9 +85,10 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 
   // Creazione astrazione Franka
   auto robot = std::make_unique<FrankaRobot>(std::move(client));
+  auto * pose_storage = static_cast<IPoseStorage *>(robot.get());
 
   //Creazione del worker
-  worker_ = std::make_unique<OpcuaWorker>(std::move(robot), 5);
+  worker_ = std::make_unique<OpcuaWorker>(std::move(robot), pose_storage, 5);
 
   //Avvio del worker
   if (!worker_->start()) {
@@ -60,12 +119,16 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 
 void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr msg)
 {
-  auto enqueueCommand = [this](FrankaCommandType type, const std::string & parameter = "") {
+  auto enqueueCommand = [this](
+    FrankaCommandType type,
+    const std::string & parameter = "",
+    const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt) {
 
       FrankaRobotCommand robot_command;
       robot_command.command_id = next_command_id_.fetch_add(1);
       robot_command.type = type;
       robot_command.parameter = parameter;
+      robot_command.pose = pose;
       robot_command.created_at = std::chrono::steady_clock::now();
 
       const auto command_id = robot_command.command_id;
@@ -83,7 +146,7 @@ void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr ms
       }
     };
 
-    auto enqueuePriority = [this](FrankaCommandType type, const std::string & parameter = "") {
+  auto enqueuePriority = [this](FrankaCommandType type, const std::string & parameter = "") {
 
       FrankaRobotCommand robot_command;
       robot_command.command_id = next_command_id_.fetch_add(1);
@@ -144,6 +207,26 @@ void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr ms
         "Nome della posa mancante");
     } else {
       enqueueCommand(FrankaCommandType::MoveToNamedPose, pose_id);
+    }
+
+  } else if (command.rfind("save_pose:", 0) == 0) {
+
+    const std::string payload = command.substr(std::string("save_pose:").size());
+
+    if (payload.empty()) {
+      RCLCPP_WARN(this->get_logger(), "Nome della posa da salvare mancante");
+    } else if (payload.find(':') == std::string::npos) {
+      enqueueCommand(FrankaCommandType::SaveCurrentPose, payload);
+    } else {
+      std::string pose_id;
+      geometry_msgs::msg::Pose pose;
+      if (!parseExplicitPoseCommand(command, pose_id, pose)) {
+        RCLCPP_WARN(
+          this->get_logger(),
+          "Formato posa non valido. Atteso save_pose:id:x:y:z:qx:qy:qz:qw");
+      } else {
+        enqueueCommand(FrankaCommandType::SaveExplicitPose, pose_id, pose);
+      }
     }
 
   } else {

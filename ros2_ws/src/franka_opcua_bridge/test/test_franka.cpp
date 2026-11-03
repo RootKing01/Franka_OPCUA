@@ -352,7 +352,7 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
 
   variable_browse_path.push_back(pose_id);
 
-  FrankaRobot robot(std::move(fake_client));
+  FrankaRobot robot(std::move(fake_client), std::chrono::milliseconds(500));
 
   bool success = robot.connect();
   ASSERT_TRUE(success);
@@ -367,7 +367,10 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
     variable_browse_path, Value(
       received_pose) );
 
-  fake_ptr->writeValue(
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, true, "", "opcua_goto", "opcua_goto"}));
+  fake_ptr->queueValue(
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, false, "", "", ""}));
 

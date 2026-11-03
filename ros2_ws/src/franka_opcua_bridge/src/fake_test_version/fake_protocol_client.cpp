@@ -71,6 +71,13 @@ bool FakeProtocolClient::readValue(
 
   std::string path_key = pathToKey(variable_browse_path);
 
+  auto queued_values = queued_variables_.find(path_key);
+  if (queued_values != queued_variables_.end() && !queued_values->second.empty()) {
+    out_value = queued_values->second.front();
+    queued_values->second.pop_front();
+    return true;
+  }
+
   auto elem = variables_.find(path_key);
 
   if (elem != variables_.end()) {      // variables_.end() una "sentinella" che segna "oltre l'ultimo elemento", non un elemento vero
@@ -85,6 +92,13 @@ bool FakeProtocolClient::readValue(
   }
 
 
+}
+
+void FakeProtocolClient::queueValue(
+  const std::vector<std::string> & variable_browse_path,
+  const Value & value)
+{
+  queued_variables_[pathToKey(variable_browse_path)].push_back(value);
 }
 
 

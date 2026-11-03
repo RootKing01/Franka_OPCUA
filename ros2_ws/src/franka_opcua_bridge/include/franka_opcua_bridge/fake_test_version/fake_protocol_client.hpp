@@ -2,6 +2,7 @@
 #define FRANKA_OPCUA_BRIDGE__FAKE_PROTOCOL_CLIENT_HPP_
 
 #include <map>
+#include <deque>
 #include <string>
 #include <vector>
 #include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
@@ -41,6 +42,8 @@ public:
     const std::vector<std::string> & variable_browse_path,
     const Value & value) override;
 
+  void queueValue(const std::vector<std::string> & variable_browse_path, const Value & value);
+
   const std::vector<CallRecord> & callLog() const {return call_log_;}
 
 private:
@@ -48,6 +51,7 @@ private:
   bool connected_ = false;
   std::vector<CallRecord> call_log_;
   std::map<std::string, Value> variables_;             // simula lo storage del server
+  std::map<std::string, std::deque<Value>> queued_variables_;
 
 
 };

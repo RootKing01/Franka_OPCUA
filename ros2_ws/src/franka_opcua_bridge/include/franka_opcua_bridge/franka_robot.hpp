@@ -2,6 +2,8 @@
 #define FRANKA_OPCUA_BRIDGE__FRANKA_ROBOT_HPP_
 
 #include <memory>
+#include <chrono>
+#include <functional>
 #include <string>
 #include <vector>
 #include <optional>
@@ -10,6 +12,7 @@
 
 #include "franka_opcua_bridge/interfaces/i_franka.hpp"
 #include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/interfaces/i_pose_storage.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 
 namespace franka_opcua_bridge
@@ -22,11 +25,13 @@ struct FrankaRobotStatus : public RobotStatus
 
 };
 
-class FrankaRobot : public IFranka
+class FrankaRobot : public IFranka, public IPoseStorage
 {
 
 public:
-  explicit FrankaRobot(std::unique_ptr<IOpcUaProtocolClient> client);
+  explicit FrankaRobot(
+    std::unique_ptr<IOpcUaProtocolClient> client,
+    std::chrono::milliseconds execution_timeout = std::chrono::seconds(60));
 
   bool connect() override;
   bool disconnect() override;
@@ -43,7 +48,9 @@ public:
 
 
   bool executeNamedTask(const std::string & task_id) override;
-  bool moveToNamedPose(const std::string & pose_id) override;
+  bool moveToNamedPose(
+    const std::string & pose_id,
+    const std::function<bool()> & should_abort = {}) override;
 
   std::unique_ptr<RobotStatus> readStatus() override;
   std::vector<double> readJointAngles() override;
@@ -55,9 +62,11 @@ public:
   bool activateFCI() override;
   bool deactivateFCI() override;
 
-  bool savePose(const std::string & pose_id);
+  bool savePose(const std::string & pose_id) override;
 
-  bool savePose(const std::string & pose_id, const geometry_msgs::msg::Pose & pose);
+  bool savePose(
+    const std::string & pose_id,
+    const geometry_msgs::msg::Pose & pose) override;
 
   /*
   template<typename T>
@@ -66,6 +75,7 @@ public:
 
 protected:
   std::unique_ptr<IOpcUaProtocolClient> client_;
+  std::chrono::milliseconds execution_timeout_;
   bool force_ = false;
 
 private:

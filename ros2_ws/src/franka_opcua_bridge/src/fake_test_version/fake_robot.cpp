@@ -31,8 +31,11 @@ bool FakeRobot::executeNamedTask(const std::string & task_id)
   return true;
 }
 
-bool FakeRobot::moveToNamedPose(const std::string & pose_id)
+bool FakeRobot::moveToNamedPose(
+  const std::string & pose_id,
+  const std::function<bool()> & should_abort)
 {
+  if (should_abort && should_abort()) {return false;}
   if (!brakes_open_) {return false;}
   last_pose_ = pose_id;
   last_task_ = "opcua_goto";

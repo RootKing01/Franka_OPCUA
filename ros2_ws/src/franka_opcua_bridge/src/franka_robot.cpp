@@ -15,8 +15,10 @@ const std::vector<std::string> kPoseMapPath = {"Robot", "KeyValueMaps"};
 
 
 FrankaRobot::FrankaRobot(
-  std::unique_ptr<IOpcUaProtocolClient> client)
-: client_(std::move(client)) {}
+  std::unique_ptr<IOpcUaProtocolClient> client,
+  std::chrono::milliseconds execution_timeout)
+: client_(std::move(client)),
+  execution_timeout_(execution_timeout) {}
 
 
 bool FrankaRobot::connect()
@@ -289,7 +291,9 @@ geometry_msgs::msg::Wrench FrankaRobot::readWrench()
 
 }
 
-bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
+bool FrankaRobot::moveToNamedPose(
+  const std::string & pose_id,
+  const std::function<bool()> & should_abort)
 {
   std::vector<std::string> pathKeyPose = kPoseMapPath;
   std::vector<Value> args;
@@ -336,24 +340,32 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
     return false;
   }
 
-  constexpr auto kExecutionTimeout = std::chrono::seconds(60);
   constexpr auto kPollingPeriod = std::chrono::milliseconds(100);
-  const auto deadline = std::chrono::steady_clock::now() + kExecutionTimeout;
+  const auto deadline = std::chrono::steady_clock::now() + execution_timeout_;
+  bool task_started = false;
 
   while (std::chrono::steady_clock::now() < deadline) {
+    if (should_abort && should_abort()) {
+      stop();
+      return false;
+    }
+
     const auto status = readStatus();
 
     if (!status || status->has_error) {
       return false;
     }
 
-    if (!status->is_running) {
+    if (status->is_running || status->active_task_name == "opcua_goto") {
+      task_started = true;
+    } else if (task_started) {
       return true;
     }
 
     std::this_thread::sleep_for(kPollingPeriod);
   }
 
+  stop();
   return false;
 }
 
