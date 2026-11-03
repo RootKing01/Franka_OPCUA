@@ -3,12 +3,14 @@
 
 #include <string>
 
-namespace franka_opcua_bridge{
+namespace franka_opcua_bridge
+{
 
 
-struct namespaceTree{
+struct namespaceTree
+{
 
-    std::string browseName;
+  std::string browseName;
 
 
 };
@@ -26,7 +28,6 @@ enum class NodeKind
   View,
   Unknown   // fallback di sicurezza, per valori futuri non ancora previsti dallo standard
 };
-
 
 
 }

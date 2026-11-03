@@ -7,7 +7,8 @@
 #include <variant>
 #include <cstdint> //aggiunta come fix oer int32_t, da controllare
 
-namespace franka_opcua_bridge{
+namespace franka_opcua_bridge
+{
 
 
 // -- Tipi Franka-specific: mappano le struct custom del NodeSet OPC UA --
@@ -82,10 +83,7 @@ struct CallResult
 };
 
 
-
-
 }
-
 
 
 #endif

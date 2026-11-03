@@ -1,7 +1,7 @@
 #ifndef FRANKA_OPCUA_BRIDGE__FAKE_ROBOT_HPP_
 #define FRANKA_OPCUA_BRIDGE__FAKE_ROBOT_HPP_
 
-#include "franka_opcua_bridge/i_franka.hpp"
+#include "franka_opcua_bridge/interfaces/i_franka.hpp"
 
 namespace franka_opcua_bridge
 {

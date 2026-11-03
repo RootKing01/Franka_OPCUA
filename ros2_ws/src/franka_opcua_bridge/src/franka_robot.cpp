@@ -15,7 +15,8 @@ const std::vector<std::string> kPoseMapPath = {"Robot", "KeyValueMaps"};
 
 
 FrankaRobot::FrankaRobot(
-  std::unique_ptr<IOpcUaProtocolClient> client) : client_(std::move(client)) {}
+  std::unique_ptr<IOpcUaProtocolClient> client)
+: client_(std::move(client)) {}
 
 
 bool FrankaRobot::connect()
@@ -167,7 +168,7 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
   Value output_value;
   std::string method = "ExecutionStatus";
   std::vector<std::string> path = kExecutionControlPath;
-  
+
   auto error_status = std::make_unique<FrankaRobotStatus>();
 
   error_status->error_message = "Struttura di default. Errore nella lettura dei dati sullo stato.";
@@ -224,8 +225,8 @@ geometry_msgs::msg::Pose FrankaRobot::readCartesianPose()
   fallback.orientation.w = 1.0;
 
   auto pose = tryReadCartesianPose();
-  
-  if (!pose) return fallback;
+
+  if (!pose) {return fallback;}
 
   return *pose;
 
@@ -325,7 +326,7 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   // Costruzione del KeyPosePair:
   // Key   = "target_pose"
   // Value = matrice 4x4 (16 double)
-  
+
   if (!buildKeyPosePair("target_pose", values)) {
     return false;
   }
@@ -334,36 +335,37 @@ bool FrankaRobot::moveToNamedPose(const std::string & pose_id)
   return executeNamedTask("opcua_goto");
 }
 
-std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose &pose)
+std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose & pose)
 {
   Eigen::Matrix4d matrix;
 
-  if(!(std::isfinite(pose.position.x)) || !(std::isfinite(pose.position.y)) || !(std::isfinite(pose.position.z))) return {};
+  if (!(std::isfinite(pose.position.x)) || !(std::isfinite(pose.position.y)) ||
+    !(std::isfinite(pose.position.z))) {return {};}
 
   Eigen::Quaterniond quaternion(pose.orientation.w,
-                                pose.orientation.x,
-                                pose.orientation.y,
-                                pose.orientation.z
-                              );
+    pose.orientation.x,
+    pose.orientation.y,
+    pose.orientation.z
+  );
 
-  if (!(std::abs(quaternion.norm() - 1.0) < kTolerance)) return {};
+  if (!(std::abs(quaternion.norm() - 1.0) < kTolerance)) {return {};}
 
   quaternion.normalize();
-  
+
   const Eigen::Matrix3d rotation = quaternion.toRotationMatrix();
 
-  matrix.block<3,3>(0,0) = rotation;
+  matrix.block<3, 3>(0, 0) = rotation;
 
-  matrix(0,3) = pose.position.x;
-  matrix(1,3) = pose.position.y;
-  matrix(2,3) = pose.position.z;
+  matrix(0, 3) = pose.position.x;
+  matrix(1, 3) = pose.position.y;
+  matrix(2, 3) = pose.position.z;
 
   matrix.block<1, 4>(3, 0) << 0.0, 0.0, 0.0, 1.0;
 
-  std::vector<double> value(matrix.data(), matrix.data()+16);
+  std::vector<double> value(matrix.data(), matrix.data() + 16);
   return value;
 
-   
+
 }
 
 bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value)
@@ -383,17 +385,17 @@ bool FrankaRobot::buildKeyPosePair(const std::string & pose_id, const std::vecto
 
 bool FrankaRobot::savePose(const std::string & pose_id)
 {
-  
+
   auto pose = tryReadCartesianPose();
-  
-  if (!pose) return false;
-  
+
+  if (!pose) {return false;}
+
   return savePose(pose_id, *pose);
 }
 
 bool FrankaRobot::setIntegerVariable(const std::string & variable_id, int32_t value)
 {
-  
+
   std::vector<Value> replaceArgs;
   replaceArgs.push_back(Value(KeyIntPairValue{variable_id, value}));
 
@@ -412,12 +414,12 @@ bool FrankaRobot::savePose(const std::string & pose_id, const geometry_msgs::msg
 
   std::vector<double> poseVector = fromPoseToVector(pose);
 
-  if (poseVector.size() != 16){
+  if (poseVector.size() != 16) {
 
     return false;
   }
 
-   return buildKeyPosePair(pose_id, poseVector);
+  return buildKeyPosePair(pose_id, poseVector);
 
 }
 

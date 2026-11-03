@@ -1,7 +1,7 @@
-#ifndef FRANKA_OPCUA_BRIDGE__I_FRANKA_
-#define FRANKA_OPCUA_BRIDGE__I_FRANKA_
+#ifndef FRANKA_OPCUA_BRIDGE__INTERFACES__I_FRANKA_
+#define FRANKA_OPCUA_BRIDGE__INTERFACES__I_FRANKA_
 
-#include "franka_opcua_bridge/i_robot.hpp"
+#include "franka_opcua_bridge/interfaces/i_robot.hpp"
 
 namespace franka_opcua_bridge
 {

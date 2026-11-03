@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <vector>
-#include "franka_opcua_bridge/i_robot.hpp"
+#include "franka_opcua_bridge/interfaces/i_robot.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 
 namespace franka_opcua_bridge

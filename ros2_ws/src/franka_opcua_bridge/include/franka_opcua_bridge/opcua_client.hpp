@@ -1,7 +1,7 @@
 #ifndef FRANKA_OPCUA_BRIDGE__OPCUA_CLIENT_
 #define FRANKA_OPCUA_BRIDGE__OPCUA_CLIENT_
 
-#include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 
 #include <open62541/client.h>
@@ -26,7 +26,7 @@ public:
   //Disabilita copia
   OpcuaClient(const OpcuaClient &) = delete;
   OpcuaClient & operator=(const OpcuaClient &) = delete;
-  
+
   bool connect() override;
   bool disconnect() override;
   bool isConnected() const override;
@@ -63,7 +63,7 @@ private:
   KeyIntPairValue convertKeyIntPair(const UA_KeyIntPair & pair);
 
   KeyPosePairValue convertKeyPosePair(const UA_KeyPosePair & pair);
-  
+
   ExecutionStatusValue convertExecutionStatus(const UA_ExecutionStatus & status);
 
   // -- Fine --
@@ -78,13 +78,16 @@ private:
 
   // -- Fine --
 
-  // -- Conversione Value -> UA_Variant -- 
-  bool valueToUaVariant(const Value &value, UA_Variant &variant);
+  // -- Conversione Value -> UA_Variant --
+  bool valueToUaVariant(const Value & value, UA_Variant & variant);
 
   // -- Conversione UA_Variant -> Value --
-  bool UaVariantToValue(const UA_Variant &variant, Value &value);
+  bool UaVariantToValue(const UA_Variant & variant, Value & value);
 
-  UA_NodeId TranslateBrowsePathtoNodeId(UA_Client * client, std::vector<std::string> browse_path);
+  bool TranslateBrowsePathtoNodeId(
+    UA_Client * client,
+    const std::vector<std::string> & browse_path,
+    UA_NodeId & out_node_id);
 
   UA_BrowseRequest exploreAddressSpace(UA_Client * client);
 

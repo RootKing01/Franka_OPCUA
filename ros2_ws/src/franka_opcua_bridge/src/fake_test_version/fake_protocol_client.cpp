@@ -11,7 +11,7 @@ bool FakeProtocolClient::connect()
 {
   connected_ = true;
   return connected_;
-  
+
 
 }
 

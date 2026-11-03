@@ -1,5 +1,5 @@
-#ifndef FRANKA_OPCUA_BRIDGE__I_PROTOCOL_CLIENT_HPP_
-#define FRANKA_OPCUA_BRIDGE__I_PROTOCOL_CLIENT_HPP_
+#ifndef FRANKA_OPCUA_BRIDGE__INTERFACES__I_PROTOCOL_CLIENT_HPP_
+#define FRANKA_OPCUA_BRIDGE__INTERFACES__I_PROTOCOL_CLIENT_HPP_
 
 namespace franka_opcua_bridge
 {
@@ -13,7 +13,7 @@ class IProtocolClient
 public:
   virtual ~IProtocolClient() = default;
 
-  virtual bool connect() = 0;      
+  virtual bool connect() = 0;
 
   virtual bool disconnect() = 0;
 

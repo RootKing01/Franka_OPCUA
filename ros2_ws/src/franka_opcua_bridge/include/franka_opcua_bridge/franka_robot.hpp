@@ -8,8 +8,8 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include <geometry_msgs/msg/wrench.hpp>
 
-#include "franka_opcua_bridge/i_franka.hpp"
-#include "franka_opcua_bridge/i_opcua_protocol_client.hpp"
+#include "franka_opcua_bridge/interfaces/i_franka.hpp"
+#include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 
 namespace franka_opcua_bridge
@@ -82,8 +82,6 @@ private:
   bool setIntegerVariable(const std::string & pose_id, const int32_t value);
 
   std::optional<geometry_msgs::msg::Pose> tryReadCartesianPose();
-  
-
 
 
 };

@@ -1,7 +1,7 @@
-#ifndef FRANKA_OPCUA_BRIDGE__I_OPCUA_PROTOCOL_CLIENT_
-#define FRANKA_OPCUA_BRIDGE__I_OPCUA_PROTOCOL_CLIENT_
+#ifndef FRANKA_OPCUA_BRIDGE__INTERFACES__I_OPCUA_PROTOCOL_CLIENT_
+#define FRANKA_OPCUA_BRIDGE__INTERFACES__I_OPCUA_PROTOCOL_CLIENT_
 
-#include "franka_opcua_bridge/i_protocol_client.hpp"
+#include "franka_opcua_bridge/interfaces/i_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 
 namespace franka_opcua_bridge

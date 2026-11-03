@@ -11,11 +11,17 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(Threads REQUIRED)
 
 
 include_directories(include)
 
-add_executable(franka_bridge_node src/franka_bridge_node.cpp src/franka_robot.cpp src/opcua_client.cpp)
+add_executable(franka_bridge_node
+  src/franka_bridge_node.cpp
+  src/franka_robot.cpp
+  src/opcua_client.cpp
+  src/franka_command_manager.cpp
+  src/opcua_worker.cpp)
 
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
 
@@ -34,7 +40,10 @@ target_sources(franka_bridge_node PRIVATE
 )
 
 ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
-target_link_libraries(franka_bridge_node open62541::open62541)
+target_link_libraries(franka_bridge_node
+  Eigen3::Eigen
+  Threads::Threads
+  open62541::open62541)
 add_dependencies(franka_bridge_node open62541-generator-opc-ua-service-types)
 target_include_directories(franka_bridge_node PRIVATE ${PROJECT_BINARY_DIR}/src_generated/open62541)
 
@@ -73,7 +82,6 @@ if(BUILD_TESTING)
   target_include_directories(test_franka PUBLIC include)
   target_include_directories(test_franka PUBLIC include /usr/include/eigen3)
   ament_target_dependencies(test_franka geometry_msgs Eigen3)
-  target_link_libraries(franka_bridge_node Eigen3::Eigen)
 endif()
 
 ament_package()
