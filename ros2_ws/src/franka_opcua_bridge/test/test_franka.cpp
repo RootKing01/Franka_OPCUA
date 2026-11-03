@@ -14,6 +14,24 @@ using franka_opcua_bridge::FrankaRobotStatus;
 using franka_opcua_bridge::ExecutionStatusValue;
 using franka_opcua_bridge::KeyPosePairValue;
 
+namespace
+{
+
+void expectQuaternionRotationNear(
+  const geometry_msgs::msg::Quaternion & actual,
+  const Eigen::Quaterniond & expected)
+{
+  const Eigen::Quaterniond actual_quaternion(
+    actual.w, actual.x, actual.y, actual.z);
+
+  EXPECT_NEAR(
+    (actual_quaternion.toRotationMatrix() - expected.toRotationMatrix()).norm(),
+    0.0,
+    1e-12);
+}
+
+}
+
 
 TEST(FrankaRobotTest, RequestControlCallsCorrectMethod) {
 
@@ -402,12 +420,6 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
   EXPECT_NEAR((rotation.transpose() * rotation - Eigen::Matrix3d::Identity()).norm(), 0.0, 1e-12);
   EXPECT_GT(rotation.determinant(), 0.0);
 
-  constexpr double kCartesianLimit = 1.0;
-  EXPECT_LE(std::abs(matrix(0, 3)), kCartesianLimit);
-  EXPECT_LE(std::abs(matrix(1, 3)), kCartesianLimit);
-  EXPECT_GE(matrix(2, 3), 0.0);
-  EXPECT_LE(matrix(2, 3), kCartesianLimit);
-
   EXPECT_NEAR(matrix(0, 3), 0.4, 1e-12);
   EXPECT_NEAR(matrix(1, 3), -0.2, 1e-12);
   EXPECT_NEAR(matrix(2, 3), 0.6, 1e-12);
@@ -454,6 +466,104 @@ TEST(FrankaRobotTest, SavePoseConvertsToColumnMajorMatrix)
     EXPECT_NEAR(saved_pose.value[index], expected_matrix[index], 1e-12);
   }
 
+}
+
+TEST(FrankaRobotTest, SavePoseConvertsQuaternionToRotationMatrix)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  FrankaRobot robot(std::move(fake_client));
+
+  ASSERT_TRUE(robot.connect());
+
+  const Eigen::Quaterniond expected_quaternion(
+    Eigen::AngleAxisd(0.7, Eigen::Vector3d::UnitX()) *
+    Eigen::AngleAxisd(-0.4, Eigen::Vector3d::UnitY()) *
+    Eigen::AngleAxisd(1.1, Eigen::Vector3d::UnitZ()));
+  geometry_msgs::msg::Pose pose;
+  pose.orientation.w = expected_quaternion.w();
+  pose.orientation.x = expected_quaternion.x();
+  pose.orientation.y = expected_quaternion.y();
+  pose.orientation.z = expected_quaternion.z();
+
+  ASSERT_TRUE(robot.savePose("p_rotation", pose));
+
+  const auto & saved_pose = fake_ptr->callLog()[0].args[0].as<KeyPosePairValue>();
+  const Eigen::Map<const Eigen::Matrix4d> matrix(saved_pose.value.data());
+
+  EXPECT_NEAR(
+    (matrix.block<3, 3>(0, 0) - expected_quaternion.toRotationMatrix()).norm(),
+    0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 0), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 1), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 2), 0.0, 1e-12);
+  EXPECT_NEAR(matrix(3, 3), 1.0, 1e-12);
+}
+
+TEST(FrankaRobotTest, ReadCartesianPoseConvertsRotationMatrixToQuaternion)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  FrankaRobot robot(std::move(fake_client));
+
+  ASSERT_TRUE(robot.connect());
+
+  const Eigen::Quaterniond expected_quaternion(
+    Eigen::AngleAxisd(-0.3, Eigen::Vector3d::UnitX()) *
+    Eigen::AngleAxisd(0.8, Eigen::Vector3d::UnitY()) *
+    Eigen::AngleAxisd(0.5, Eigen::Vector3d::UnitZ()));
+  Eigen::Matrix4d matrix = Eigen::Matrix4d::Identity();
+  matrix.block<3, 3>(0, 0) = expected_quaternion.toRotationMatrix();
+  matrix(0, 3) = 0.4;
+  matrix(1, 3) = -0.2;
+  matrix(2, 3) = 0.6;
+  const std::vector<double> values(matrix.data(), matrix.data() + 16);
+
+  ASSERT_TRUE(
+    fake_ptr->writeValue(
+      {"Robot", "ExecutionControl", "CartesianPose"}, Value(values)));
+
+  const auto pose = robot.readCartesianPose();
+
+  EXPECT_NEAR(pose.position.x, 0.4, 1e-12);
+  EXPECT_NEAR(pose.position.y, -0.2, 1e-12);
+  EXPECT_NEAR(pose.position.z, 0.6, 1e-12);
+  expectQuaternionRotationNear(pose.orientation, expected_quaternion);
+}
+
+TEST(FrankaRobotTest, PoseMatrixPoseRoundTripPreservesPose)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  FrankaRobot robot(std::move(fake_client));
+
+  ASSERT_TRUE(robot.connect());
+
+  const Eigen::Quaterniond expected_quaternion(
+    Eigen::AngleAxisd(0.2, Eigen::Vector3d::UnitX()) *
+    Eigen::AngleAxisd(-0.9, Eigen::Vector3d::UnitY()) *
+    Eigen::AngleAxisd(0.6, Eigen::Vector3d::UnitZ()));
+  geometry_msgs::msg::Pose original_pose;
+  original_pose.position.x = 0.4;
+  original_pose.position.y = -0.2;
+  original_pose.position.z = 0.6;
+  original_pose.orientation.w = expected_quaternion.w();
+  original_pose.orientation.x = expected_quaternion.x();
+  original_pose.orientation.y = expected_quaternion.y();
+  original_pose.orientation.z = expected_quaternion.z();
+
+  ASSERT_TRUE(robot.savePose("p_round_trip", original_pose));
+  const auto & saved_pose = fake_ptr->callLog()[0].args[0].as<KeyPosePairValue>();
+  ASSERT_TRUE(
+    fake_ptr->writeValue(
+      {"Robot", "ExecutionControl", "CartesianPose"}, Value(saved_pose.value)));
+
+  const auto round_trip_pose = robot.readCartesianPose();
+
+  EXPECT_NEAR(round_trip_pose.position.x, original_pose.position.x, 1e-12);
+  EXPECT_NEAR(round_trip_pose.position.y, original_pose.position.y, 1e-12);
+  EXPECT_NEAR(round_trip_pose.position.z, original_pose.position.z, 1e-12);
+  expectQuaternionRotationNear(round_trip_pose.orientation, expected_quaternion);
 }
 
 

@@ -75,6 +75,20 @@ if(BUILD_TESTING)
     src/fake_test_version/fake_protocol_client.cpp)
   target_include_directories(test_fake_protocol_client PUBLIC include)
 
+  ament_add_gtest(test_franka_command_manager
+    test/test_franka_command_manager.cpp
+    src/franka_command_manager.cpp)
+  target_include_directories(test_franka_command_manager PUBLIC include)
+  ament_target_dependencies(test_franka_command_manager geometry_msgs)
+
+  ament_add_gtest(test_opcua_worker
+    test/test_opcua_worker.cpp
+    src/opcua_worker.cpp
+    src/franka_command_manager.cpp)
+  target_include_directories(test_opcua_worker PUBLIC include)
+  ament_target_dependencies(test_opcua_worker rclcpp geometry_msgs)
+  target_link_libraries(test_opcua_worker Threads::Threads)
+
   ament_add_gtest(test_franka
     test/test_franka.cpp
     src/franka_robot.cpp

@@ -62,14 +62,14 @@ std::optional<FrankaRobotCommand> FrankaCommandManager::waitAndPop()
       return !command_queue.empty() || !priority_queue.empty() || shutdown_requested_;
     });
 
+  if (shutdown_requested_) {return std::nullopt;}
+
   if (!priority_queue.empty()) {
     FrankaRobotCommand command = std::move(priority_queue.front());
     priority_queue.pop();
 
     return command;
   }
-
-  if (shutdown_requested_) {return std::nullopt;}
 
   FrankaRobotCommand command = std::move(command_queue.front());
   command_queue.pop();
