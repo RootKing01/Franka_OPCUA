@@ -645,7 +645,8 @@ bool OpcuaClient::UaVariantToValue(
             if (type == &UA_OPC_UA_SERVICE_TYPES[
                     UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
 
-                UA_ExecutionStatus tmp{};
+                UA_ExecutionStatus tmp;
+                UA_init(&tmp, type);
 
                 size_t offset = 0;
 
@@ -678,7 +679,8 @@ bool OpcuaClient::UaVariantToValue(
             if (type == &UA_OPC_UA_SERVICE_TYPES[
                     UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
 
-                UA_KeyIntPair tmp{};
+                UA_KeyIntPair tmp;
+                UA_init(&tmp, type);
 
                 size_t offset = 0;
 
@@ -711,7 +713,8 @@ bool OpcuaClient::UaVariantToValue(
             if (type == &UA_OPC_UA_SERVICE_TYPES[
                     UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
 
-                UA_KeyPosePair tmp{};
+                UA_KeyPosePair tmp;
+                UA_init(&tmp, type);
 
                 size_t offset = 0;
 
