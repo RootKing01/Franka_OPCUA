@@ -500,8 +500,16 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
       const UA_ByteString & body = extension->content.encoded.body;
 
       if (body.length == 0 || body.data == nullptr) {
+        std::cerr << "[OPCUA] Encoded ExtensionObject has empty body" << std::endl;
         return false;
       }
+
+      std::cerr << "[OPCUA] Encoded ExtensionObject typeId namespace="
+                << encoding_id.namespaceIndex
+                << ", numeric="
+                << (encoding_id.identifierType == UA_NODEIDTYPE_NUMERIC ?
+          encoding_id.identifier.numeric : 0)
+                << ", bodyLength=" << body.length << std::endl;
 
       const UA_DataType * type = nullptr;
       for (size_t i = 0; i < UA_OPC_UA_SERVICE_TYPES_COUNT; ++i) {
@@ -514,6 +522,7 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
       }
 
       if (type == nullptr) {
+        std::cerr << "[OPCUA] No custom type matches binaryEncodingId" << std::endl;
         return false;
       }
 
@@ -523,6 +532,10 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
         size_t offset = 0;
         UA_StatusCode status = UA_decodeBinary(
           &body, &offset, &decoded, type, &custom_data_types_);
+
+        std::cerr << "[OPCUA] Decoded KeyIntPair status="
+                  << UA_StatusCode_name(status)
+                  << ", offset=" << offset << std::endl;
 
         if (status == UA_STATUSCODE_GOOD && offset == body.length) {
           value = Value(convertKeyIntPair(decoded));
@@ -541,6 +554,10 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
         UA_StatusCode status = UA_decodeBinary(
           &body, &offset, &decoded, type, &custom_data_types_);
 
+        std::cerr << "[OPCUA] Decoded KeyPosePair status="
+                  << UA_StatusCode_name(status)
+                  << ", offset=" << offset << std::endl;
+
         if (status == UA_STATUSCODE_GOOD && offset == body.length) {
           value = Value(convertKeyPosePair(decoded));
           UA_clear(&decoded, type);
@@ -557,6 +574,10 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
         size_t offset = 0;
         UA_StatusCode status = UA_decodeBinary(
           &body, &offset, &decoded, type, &custom_data_types_);
+
+        std::cerr << "[OPCUA] Decoded ExecutionStatus status="
+                  << UA_StatusCode_name(status)
+                  << ", offset=" << offset << std::endl;
 
         if (status == UA_STATUSCODE_GOOD && offset == body.length) {
           value = Value(convertExecutionStatus(decoded));
