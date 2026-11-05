@@ -45,8 +45,10 @@ target_link_libraries(franka_bridge_node
   Threads::Threads
   open62541::open62541)
 add_dependencies(franka_bridge_node open62541-generator-opc-ua-service-types)
-target_include_directories(franka_bridge_node PRIVATE ${PROJECT_BINARY_DIR}/src_generated/open62541)
-
+target_include_directories(franka_bridge_node PRIVATE
+    ${PROJECT_BINARY_DIR}/src_generated/open62541
+    /opt/open62541/src
+)
 install(TARGETS
   franka_bridge_node
   DESTINATION lib/${PROJECT_NAME})
