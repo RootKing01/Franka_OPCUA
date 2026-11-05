@@ -415,86 +415,240 @@ bool OpcuaClient::valueToUaVariant(const Value & value, UA_Variant & variant)
 
 // -- Conversione UA_Variant -> Value --
 
-bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
-{
 
-  if (variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]) {
+bool OpcuaClient::UaVariantToValue(
+  const UA_Variant &variant,
+  Value &value)
+{
+  if (variant.type == nullptr || variant.data == nullptr) {
+    return false;
+  }
+
+  // BOOLEAN
+  if (variant.type == &UA_TYPES[UA_TYPES_BOOLEAN] &&
+      UA_Variant_isScalar(&variant)) {
+
     value = Value(*static_cast<UA_Boolean *>(variant.data));
     return true;
   }
 
-  if (variant.type == &UA_TYPES[UA_TYPES_INT32]) {
+  // INT32
+  if (variant.type == &UA_TYPES[UA_TYPES_INT32] &&
+      UA_Variant_isScalar(&variant)) {
+
     value = Value(*static_cast<UA_Int32 *>(variant.data));
     return true;
   }
 
-  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] && UA_Variant_isScalar(&variant)) {
+  // DOUBLE SCALAR
+  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] &&
+      UA_Variant_isScalar(&variant)) {
+
     value = Value(*static_cast<UA_Double *>(variant.data));
     return true;
   }
 
-  if (variant.type == &UA_TYPES[UA_TYPES_STRING]) {
-    UA_String * strValue = static_cast<UA_String *>(variant.data);
+  // STRING
+  if (variant.type == &UA_TYPES[UA_TYPES_STRING] &&
+      UA_Variant_isScalar(&variant)) {
 
-    std::string outputString(reinterpret_cast<char *>(strValue->data), strValue->length);
+    const UA_String *strValue =
+      static_cast<const UA_String *>(variant.data);
+
+    if (strValue->length > 0 && strValue->data == nullptr) {
+      return false;
+    }
+
+    std::string outputString;
+
+    if (strValue->length > 0) {
+      outputString.assign(
+        reinterpret_cast<const char *>(strValue->data),
+        strValue->length
+      );
+    }
 
     value = Value(outputString);
-
     return true;
   }
 
-  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] && !UA_Variant_isScalar(&variant)) {
-    UA_Double * data = static_cast<UA_Double *>(variant.data);
+  // DOUBLE ARRAY
+  if (variant.type == &UA_TYPES[UA_TYPES_DOUBLE] &&
+      !UA_Variant_isScalar(&variant)) {
 
-    std::vector<double> doubleValues(data, data + variant.arrayLength);
+    if (variant.arrayLength == 0) {
+      value = Value(std::vector<double>{});
+      return true;
+    }
+
+    const UA_Double *data =
+      static_cast<const UA_Double *>(variant.data);
+
+    std::vector<double> doubleValues(
+      data,
+      data + variant.arrayLength
+    );
 
     value = Value(doubleValues);
     return true;
   }
 
-  if (variant.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] && UA_Variant_isScalar(&variant)) {
-    UA_ExtensionObject * extension = static_cast<UA_ExtensionObject *>(variant.data);
+  // EXTENSION OBJECT
+  if (variant.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] &&
+      UA_Variant_isScalar(&variant)) {
+
+    const UA_ExtensionObject *extension =
+      static_cast<const UA_ExtensionObject *>(variant.data);
+
+    // -----------------------------------------------
+    // CASE 1: ALREADY DECODED
+    // -----------------------------------------------
 
     if (extension->encoding == UA_EXTENSIONOBJECT_DECODED ||
-      extension->encoding == UA_EXTENSIONOBJECT_DECODED_NODELETE)
-    {
-      if (extension->content.decoded.type ==
-        &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR])
-      {
-        UA_KeyIntPair * intKeyPair = static_cast<UA_KeyIntPair *>(extension->content.decoded.data);
+        extension->encoding == UA_EXTENSIONOBJECT_DECODED_NODELETE) {
 
-        value = Value(convertKeyIntPair(*intKeyPair));
+      const UA_DataType *type = extension->content.decoded.type;
+      const void *data = extension->content.decoded.data;
 
-        return true;
-
-      } else if (extension->content.decoded.type ==
-        &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR])
-      {
-        UA_KeyPosePair * keyPose = static_cast<UA_KeyPosePair *>(extension->content.decoded.data);
-
-        value = Value(convertKeyPosePair(*keyPose));
-
-        return true;
-
-      } else if (extension->content.decoded.type ==
-        &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS])
-      {
-        UA_ExecutionStatus * execStatus =
-          static_cast<UA_ExecutionStatus *>(extension->content.decoded.data);
-
-        value = Value(convertExecutionStatus(*execStatus));
-
-        return true;
-
-      } else {
+      if (type == nullptr || data == nullptr) {
         return false;
       }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
+
+        value = Value(convertKeyIntPair(
+          *static_cast<const UA_KeyIntPair *>(data)
+        ));
+
+        return true;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
+
+        value = Value(convertKeyPosePair(
+          *static_cast<const UA_KeyPosePair *>(data)
+        ));
+
+        return true;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
+
+        value = Value(convertExecutionStatus(
+          *static_cast<const UA_ExecutionStatus *>(data)
+        ));
+
+        return true;
+      }
+
+      return false;
     }
+
+    // -----------------------------------------------
+    // CASE 2: ENCODED BYTESTRING
+    // -----------------------------------------------
+
+    if (extension->encoding == UA_EXTENSIONOBJECT_ENCODED_BYTESTRING) {
+
+      const UA_NodeId &encId = extension->content.encoded.typeId;
+      const UA_ByteString &body = extension->content.encoded.body;
+
+      if (body.length > 0 && body.data == nullptr) {
+        return false;
+      }
+
+      // Find the custom type using its binaryEncodingId
+      const UA_DataType *type = nullptr;
+
+      for (size_t i = 0; i < UA_OPC_UA_SERVICE_TYPES_COUNT; ++i) {
+
+        if (UA_NodeId_equal(
+              &encId,
+              &UA_OPC_UA_SERVICE_TYPES[i].binaryEncodingId)) {
+
+          type = &UA_OPC_UA_SERVICE_TYPES[i];
+          break;
+        }
+      }
+
+      if (type == nullptr) {
+        return false;
+      }
+
+      // Decode the corresponding custom type
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
+
+        UA_ExecutionStatus tmp;
+        UA_init(&tmp, type);
+
+        UA_StatusCode status =
+          UA_decodeBinary(&body, &tmp, type, nullptr);
+
+        if (status != UA_STATUSCODE_GOOD) {
+          UA_clear(&tmp, type);
+          return false;
+        }
+
+        value = Value(convertExecutionStatus(tmp));
+
+        UA_clear(&tmp, type);
+        return true;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
+
+        UA_KeyIntPair tmp;
+        UA_init(&tmp, type);
+
+        UA_StatusCode status =
+          UA_decodeBinary(&body, &tmp, type, nullptr);
+
+        if (status != UA_STATUSCODE_GOOD) {
+          UA_clear(&tmp, type);
+          return false;
+        }
+
+        value = Value(convertKeyIntPair(tmp));
+
+        UA_clear(&tmp, type);
+        return true;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[
+            UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
+
+        UA_KeyPosePair tmp;
+        UA_init(&tmp, type);
+
+        UA_StatusCode status =
+          UA_decodeBinary(&body, &tmp, type, nullptr);
+
+        if (status != UA_STATUSCODE_GOOD) {
+          UA_clear(&tmp, type);
+          return false;
+        }
+
+        value = Value(convertKeyPosePair(tmp));
+
+        UA_clear(&tmp, type);
+        return true;
+      }
+
+      return false;
+    }
+
+    return false;
   }
 
   return false;
-
 }
+
 
 
 // -- Conversioni in lettura --
