@@ -422,6 +422,20 @@ bool OpcuaClient::valueToUaVariant(const Value & value, UA_Variant & variant)
 bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
 {
 
+  std::cerr << "[OPCUA] UaVariantToValue: type="
+            << (variant.type != nullptr ? variant.type->typeName : "null")
+            << ", scalar=" << UA_Variant_isScalar(&variant)
+            << ", arrayLength=" << variant.arrayLength
+            << ", data=" << variant.data << std::endl;
+
+  if (variant.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] &&
+    variant.data != nullptr)
+  {
+    const auto * extension = static_cast<const UA_ExtensionObject *>(variant.data);
+    std::cerr << "[OPCUA] ExtensionObject encoding="
+              << static_cast<int>(extension->encoding) << std::endl;
+  }
+
   if (variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]) {
     value = Value(*static_cast<UA_Boolean *>(variant.data));
     return true;
