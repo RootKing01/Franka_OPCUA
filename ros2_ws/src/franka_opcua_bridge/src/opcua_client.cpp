@@ -54,6 +54,8 @@ bool OpcuaClient::setEndpointAndUser(std::string endpoint, std::string user)
 bool OpcuaClient::connect()
 {
 
+  std::cerr << "[OPCUA] connect() eseguita" << std::endl;
+
   char * env_password = nullptr;
 
   bool setted = setEndpointAndUser("FRANKA_ENDPOINT", "FRANKA_USER");
@@ -68,6 +70,14 @@ bool OpcuaClient::connect()
   UA_ClientConfig * config = UA_Client_getConfig(client_);
 
   UA_ClientConfig_setDefault(config);
+
+  config->customDataTypes = &custom_data_types_;
+
+  std::cerr << "[OPCUA] custom types registrati: "
+            << config->customDataTypes
+            << ", count="
+            << config->customDataTypes->typesSize
+            << std::endl;
 
   config->timeout = 10000;
 
@@ -227,12 +237,37 @@ bool OpcuaClient::readValue(
 
   UA_StatusCode status = UA_Client_readValueAttribute(client_, nodePath_id, &variantOutput);
 
+  std::cerr << "[OPCUA] readValue: "
+            << UA_StatusCode_name(status)
+            << " (" << status << ")"
+            << std::endl;
+
   if (status != UA_STATUSCODE_GOOD) {
     UA_NodeId_clear(&nodePath_id);
     return false;
   }
 
+  if (variantOutput.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] &&
+    UA_Variant_isScalar(&variantOutput))
+  {
+    const auto * extension = static_cast<const UA_ExtensionObject *>(variantOutput.data);
+
+    std::cerr << "[OPCUA] ExtensionObject encoding="
+              << static_cast<int>(extension->encoding) << std::endl;
+
+    if (extension->encoding == UA_EXTENSIONOBJECT_ENCODED_BYTESTRING) {
+      const UA_NodeId & type_id = extension->content.encoded.typeId;
+      std::cerr << "[OPCUA] typeId namespace=" << type_id.namespaceIndex;
+      if (type_id.identifierType == UA_NODEIDTYPE_NUMERIC) {
+        std::cerr << ", numeric=" << type_id.identifier.numeric;
+      }
+      std::cerr << std::endl;
+    }
+  }
+
   bool success = UaVariantToValue(variantOutput, out_value);
+
+  std::cerr << "[OPCUA] UaVariantToValue success=" << success << std::endl;
   UA_Variant_clear(&variantOutput);
 
   UA_NodeId_clear(&nodePath_id);

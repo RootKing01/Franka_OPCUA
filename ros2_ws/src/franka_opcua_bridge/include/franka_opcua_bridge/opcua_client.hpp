@@ -55,6 +55,11 @@ private:
   std::string endpoint_;
   std::string user_;
   UA_Client * client_ = nullptr;
+  UA_DataTypeArray custom_data_types_{
+    nullptr,
+    UA_OPC_UA_SERVICE_TYPES_COUNT,
+    UA_OPC_UA_SERVICE_TYPES
+  };
 
   // -- Conversione in lettura
 

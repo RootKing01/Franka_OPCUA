@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <thread>
+#include <iostream>
 #include "geometry_msgs/msg/pose.hpp"
 #include <Eigen/Dense>
 #include <cmath>
@@ -180,6 +181,11 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 
   bool success = client_->readValue(path, output_value);
 
+  std::cerr << "[STATUS] read success=" << success
+            << ", is_execution_status="
+            << output_value.is<ExecutionStatusValue>()
+            << std::endl;
+
   if (success) {
     if (output_value.is<ExecutionStatusValue>()) {
 
@@ -190,6 +196,13 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
       robotStatus->error_message = status.error_message;
       robotStatus->active_task_name = status.active_task_name;
       robotStatus->active_task_id = status.active_task_id;
+
+      std::cerr << "[STATUS] has_error=" << robotStatus->has_error
+            << ", is_running=" << robotStatus->is_running
+            << ", active_task_name='" << robotStatus->active_task_name
+            << "', active_task_id='" << robotStatus->active_task_id
+            << "', error_message='" << robotStatus->error_message
+            << "'" << std::endl;
 
       return robotStatus;
 
@@ -306,6 +319,12 @@ bool FrankaRobot::moveToNamedPose(
 
   result = client_->callMethod(pathKeyPose, "Read", args);
 
+  std::cerr << "[MOVE] Read pose '" << pose_id
+            << "': ok=" << result.ok
+            << ", outputs=" << result.output_values.size()
+            << ", error='" << result.error_message << "'"
+            << std::endl;
+
   if (!result.ok) {
     return false;
   }
@@ -336,7 +355,14 @@ bool FrankaRobot::moveToNamedPose(
   }
 
   // Avvia il task che utilizza target_pose
-  if (!executeNamedTask("opcua_goto")) {
+  std::cerr << "[MOVE] target_pose scritto. Avvio opcua_goto" << std::endl;
+
+  bool task_result = executeNamedTask("opcua_goto");
+
+  std::cerr << "[MOVE] StartTask opcua_goto: result="
+            << task_result << std::endl;
+
+  if (!task_result) {
     return false;
   }
 
