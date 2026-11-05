@@ -470,6 +470,26 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
     return true;
   }
 
+  if (variant.data != nullptr && UA_Variant_isScalar(&variant)) {
+    if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
+      value = Value(convertKeyIntPair(
+          *static_cast<const UA_KeyIntPair *>(variant.data)));
+      return true;
+    }
+
+    if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
+      value = Value(convertKeyPosePair(
+          *static_cast<const UA_KeyPosePair *>(variant.data)));
+      return true;
+    }
+
+    if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
+      value = Value(convertExecutionStatus(
+          *static_cast<const UA_ExecutionStatus *>(variant.data)));
+      return true;
+    }
+  }
+
   if (variant.type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT] && UA_Variant_isScalar(&variant)) {
     UA_ExtensionObject * extension = static_cast<UA_ExtensionObject *>(variant.data);
 
