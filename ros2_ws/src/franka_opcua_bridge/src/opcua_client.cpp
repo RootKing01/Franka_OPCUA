@@ -418,6 +418,7 @@ bool OpcuaClient::valueToUaVariant(const Value & value, UA_Variant & variant)
 
 
 
+
 bool OpcuaClient::UaVariantToValue(
     const UA_Variant &variant,
     Value &value)
@@ -542,6 +543,7 @@ bool OpcuaClient::UaVariantToValue(
 
         // =============================================
         // CASE 1: DECODED / DECODED_NODELETE
+        // Manteniamo il comportamento originale.
         // =============================================
 
         if (extension->encoding == UA_EXTENSIONOBJECT_DECODED ||
@@ -555,19 +557,6 @@ bool OpcuaClient::UaVariantToValue(
 
             if (type == nullptr || data == nullptr)
                 return false;
-
-            // EXECUTION STATUS
-            if (type == &UA_OPC_UA_SERVICE_TYPES[
-                    UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
-
-                value = Value(
-                    convertExecutionStatus(
-                        *static_cast<const UA_ExecutionStatus *>(data)
-                    )
-                );
-
-                return true;
-            }
 
             // KEY INT PAIR
             if (type == &UA_OPC_UA_SERVICE_TYPES[
@@ -589,6 +578,19 @@ bool OpcuaClient::UaVariantToValue(
                 value = Value(
                     convertKeyPosePair(
                         *static_cast<const UA_KeyPosePair *>(data)
+                    )
+                );
+
+                return true;
+            }
+
+            // EXECUTION STATUS
+            if (type == &UA_OPC_UA_SERVICE_TYPES[
+                    UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
+
+                value = Value(
+                    convertExecutionStatus(
+                        *static_cast<const UA_ExecutionStatus *>(data)
                     )
                 );
 
@@ -636,42 +638,6 @@ bool OpcuaClient::UaVariantToValue(
             if (type == nullptr)
                 return false;
 
-            // -----------------------------------------
-            // Generic decoding helper
-            // -----------------------------------------
-
-            auto decodeCustomType =
-                [&](auto &tmp, auto converter) -> bool {
-
-                    size_t offset = 0;
-
-                    UA_StatusCode status = UA_decodeBinary(
-                        &body,
-                        &offset,
-                        &tmp,
-                        type,
-                        &custom_data_types_
-                    );
-
-                    // Verify decoding status and consumption
-                    // of the complete ByteString.
-
-                    if (status != UA_STATUSCODE_GOOD ||
-                        offset != body.length) {
-
-                        UA_clear(&tmp, type);
-                        return false;
-                    }
-
-                    // Convert before releasing decoded memory.
-                    value = Value(converter(tmp));
-
-                    // Release dynamically allocated members.
-                    UA_clear(&tmp, type);
-
-                    return true;
-                };
-
             // =========================================
             // EXECUTION STATUS
             // =========================================
@@ -681,12 +647,28 @@ bool OpcuaClient::UaVariantToValue(
 
                 UA_ExecutionStatus tmp{};
 
-                return decodeCustomType(
-                    tmp,
-                    [this](const UA_ExecutionStatus &v) {
-                        return convertExecutionStatus(v);
-                    }
+                size_t offset = 0;
+
+                UA_StatusCode status = UA_decodeBinary(
+                    &body,
+                    &offset,
+                    &tmp,
+                    type,
+                    &custom_data_types_
                 );
+
+                if (status != UA_STATUSCODE_GOOD ||
+                    offset != body.length) {
+
+                    UA_clear(&tmp, type);
+                    return false;
+                }
+
+                value = Value(convertExecutionStatus(tmp));
+
+                UA_clear(&tmp, type);
+
+                return true;
             }
 
             // =========================================
@@ -698,12 +680,28 @@ bool OpcuaClient::UaVariantToValue(
 
                 UA_KeyIntPair tmp{};
 
-                return decodeCustomType(
-                    tmp,
-                    [this](const UA_KeyIntPair &v) {
-                        return convertKeyIntPair(v);
-                    }
+                size_t offset = 0;
+
+                UA_StatusCode status = UA_decodeBinary(
+                    &body,
+                    &offset,
+                    &tmp,
+                    type,
+                    &custom_data_types_
                 );
+
+                if (status != UA_STATUSCODE_GOOD ||
+                    offset != body.length) {
+
+                    UA_clear(&tmp, type);
+                    return false;
+                }
+
+                value = Value(convertKeyIntPair(tmp));
+
+                UA_clear(&tmp, type);
+
+                return true;
             }
 
             // =========================================
@@ -715,12 +713,28 @@ bool OpcuaClient::UaVariantToValue(
 
                 UA_KeyPosePair tmp{};
 
-                return decodeCustomType(
-                    tmp,
-                    [this](const UA_KeyPosePair &v) {
-                        return convertKeyPosePair(v);
-                    }
+                size_t offset = 0;
+
+                UA_StatusCode status = UA_decodeBinary(
+                    &body,
+                    &offset,
+                    &tmp,
+                    type,
+                    &custom_data_types_
                 );
+
+                if (status != UA_STATUSCODE_GOOD ||
+                    offset != body.length) {
+
+                    UA_clear(&tmp, type);
+                    return false;
+                }
+
+                value = Value(convertKeyPosePair(tmp));
+
+                UA_clear(&tmp, type);
+
+                return true;
             }
 
             return false;
@@ -731,6 +745,7 @@ bool OpcuaClient::UaVariantToValue(
 
     return false;
 }
+
 
 
 
