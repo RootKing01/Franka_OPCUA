@@ -494,6 +494,82 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
         return false;
       }
     }
+
+    if (extension->encoding == UA_EXTENSIONOBJECT_ENCODED_BYTESTRING) {
+      const UA_NodeId & encoding_id = extension->content.encoded.typeId;
+      const UA_ByteString & body = extension->content.encoded.body;
+
+      if (body.length == 0 || body.data == nullptr) {
+        return false;
+      }
+
+      const UA_DataType * type = nullptr;
+      for (size_t i = 0; i < UA_OPC_UA_SERVICE_TYPES_COUNT; ++i) {
+        if (UA_NodeId_equal(
+            &encoding_id,
+            &UA_OPC_UA_SERVICE_TYPES[i].binaryEncodingId)) {
+          type = &UA_OPC_UA_SERVICE_TYPES[i];
+          break;
+        }
+      }
+
+      if (type == nullptr) {
+        return false;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
+        UA_KeyIntPair decoded;
+        UA_init(&decoded, type);
+        size_t offset = 0;
+        UA_StatusCode status = UA_decodeBinary(
+          &body, &offset, &decoded, type, &custom_data_types_);
+
+        if (status == UA_STATUSCODE_GOOD && offset == body.length) {
+          value = Value(convertKeyIntPair(decoded));
+          UA_clear(&decoded, type);
+          return true;
+        }
+
+        UA_clear(&decoded, type);
+        return false;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
+        UA_KeyPosePair decoded;
+        UA_init(&decoded, type);
+        size_t offset = 0;
+        UA_StatusCode status = UA_decodeBinary(
+          &body, &offset, &decoded, type, &custom_data_types_);
+
+        if (status == UA_STATUSCODE_GOOD && offset == body.length) {
+          value = Value(convertKeyPosePair(decoded));
+          UA_clear(&decoded, type);
+          return true;
+        }
+
+        UA_clear(&decoded, type);
+        return false;
+      }
+
+      if (type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
+        UA_ExecutionStatus decoded;
+        UA_init(&decoded, type);
+        size_t offset = 0;
+        UA_StatusCode status = UA_decodeBinary(
+          &body, &offset, &decoded, type, &custom_data_types_);
+
+        if (status == UA_STATUSCODE_GOOD && offset == body.length) {
+          value = Value(convertExecutionStatus(decoded));
+          UA_clear(&decoded, type);
+          return true;
+        }
+
+        UA_clear(&decoded, type);
+        return false;
+      }
+
+      return false;
+    }
   }
 
   return false;
