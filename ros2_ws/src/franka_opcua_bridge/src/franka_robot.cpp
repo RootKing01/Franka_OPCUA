@@ -545,4 +545,34 @@ std::optional<geometry_msgs::msg::Pose> FrankaRobot::tryReadCartesianPose()
 
 }
 
+
+bool FrankaRobot::switchToExecution(){
+
+  CallResult result = client_->callMethod(kExecutionControlPath, "SwitchToExecution", {});
+
+  return result.ok;
+}
+
+
+std::vector<std::string> FrankaRobot::showAvailableTasks(){
+
+  std::vector<std::string> path = kExecutionControlPath;
+  std::string method = "Tasks";
+  Value output_value;
+
+  path.push_back(method);
+
+  bool success = client_->readValue(path, output_value);
+
+  if (success && output_value.is<std::vector<std::string>>()) {
+    return output_value.as<std::vector<std::string>>();
+  }
+
+
+  return {};
+
+
+}
+
+
 }

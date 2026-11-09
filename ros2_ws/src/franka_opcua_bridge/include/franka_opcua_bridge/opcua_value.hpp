@@ -49,6 +49,7 @@ public:
     double,
     std::string,
     std::vector<double>,
+    std::vector<std::string>,
     KeyIntPairValue,
     KeyPosePairValue,
     ExecutionStatusValue,

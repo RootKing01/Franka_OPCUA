@@ -68,6 +68,10 @@ public:
     const std::string & pose_id,
     const geometry_msgs::msg::Pose & pose) override;
 
+  bool switchToExecution();
+
+  std::vector<std::string> showAvailableTasks();
+
   /*
   template<typename T>
   T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);

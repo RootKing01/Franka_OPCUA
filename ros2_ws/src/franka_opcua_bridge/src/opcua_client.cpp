@@ -417,8 +417,6 @@ bool OpcuaClient::valueToUaVariant(const Value & value, UA_Variant & variant)
 // -- Conversione UA_Variant -> Value --
 
 
-
-
 bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
 {
 
@@ -452,12 +450,25 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
   }
 
   if (variant.type == &UA_TYPES[UA_TYPES_STRING]) {
-    UA_String * strValue = static_cast<UA_String *>(variant.data);
+    if (variant.data == nullptr) {
+      return false;
+    }
 
-    std::string outputString(reinterpret_cast<char *>(strValue->data), strValue->length);
+    if (UA_Variant_isScalar(&variant)) {
+      const auto * ua_string = static_cast<const UA_String *>(variant.data);
+      value = Value(UA_StringConversion(*ua_string));
+      return true;
+    }
 
-    value = Value(outputString);
+    const auto * ua_strings = static_cast<const UA_String *>(variant.data);
+    std::vector<std::string> task_ids;
+    task_ids.reserve(variant.arrayLength);
 
+    for (size_t i = 0; i < variant.arrayLength; ++i) {
+      task_ids.push_back(UA_StringConversion(ua_strings[i]));
+    }
+
+    value = Value(std::move(task_ids));
     return true;
   }
 
