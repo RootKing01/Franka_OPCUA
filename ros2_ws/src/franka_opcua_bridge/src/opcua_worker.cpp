@@ -102,10 +102,30 @@ void OpcuaWorker::stop()
     RCLCPP_INFO(workerLogger(), "Arresto worker richiesto");
 
     std::unique_lock<std::mutex> lock(mutex_);
+    lock.lock();
     worker_state_ = WorkerStatus::Stopping;
-    lock.unlock();
 
     command_manager_.shutdown();
+
+    lock.unlock();
+
+    while(true)
+    {
+      auto command = command_manager_.tryPop();
+
+      if(!command){
+
+        break;
+      }
+
+      FrankaCommandResult result;
+      result.command_id = command->command_id;
+      result.status = FrankaCommandStatus::Cancelled;
+      result.message = "Worker stoppato. Comando non eseguito";
+      result.finished_at = std::chrono::steady_clock::now();
+
+      pushResult(std::move(result));
+    }
 
     worker_thread_.join();
 

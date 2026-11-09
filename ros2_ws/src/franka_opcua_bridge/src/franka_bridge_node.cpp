@@ -194,6 +194,14 @@ void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr ms
   } else if (command == "deactivate_FCI") {
 
     enqueueCommand(FrankaCommandType::DeactivateFci);
+  
+  }else if(command == "show_tasks"){
+
+    enqueueCommand(FrankaCommandType::ShowTasks);
+
+  }else if(command == "switch_exec"){
+
+    enqueueCommand(FrankaCommandType::SwitchToExec);
 
   } else if (command == "stop") {
 
