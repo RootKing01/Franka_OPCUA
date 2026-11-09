@@ -66,6 +66,7 @@ private:
   std::condition_variable state_condition_;
   std::thread worker_thread_;
   WorkerStatus worker_state_;
+  bool start_attempted_{false};
   std::atomic_bool abort_requested_{false};
 
 

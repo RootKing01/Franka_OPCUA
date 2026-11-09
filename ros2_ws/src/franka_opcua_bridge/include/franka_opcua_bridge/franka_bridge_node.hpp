@@ -30,6 +30,8 @@ private:
 
   std::atomic<std::uint64_t> next_command_id_{1};
 
+  void publishPendingResults();
+
   void commandCallback(
     const std_msgs::msg::String::SharedPtr msg);
 };

@@ -49,11 +49,17 @@ bool OpcuaWorker::start()
 
   std::unique_lock<std::mutex> lock(mutex_);
 
+  if (start_attempted_) {
+    RCLCPP_WARN(workerLogger(), "Avvio rifiutato: worker utilizzabile una sola volta");
+    return false;
+  }
+
   if (worker_state_ != WorkerStatus::Disconnected) {
     RCLCPP_WARN(workerLogger(), "Avvio rifiutato: worker non disconnesso");
     return false;
   }
 
+  start_attempted_ = true;
   worker_state_ = WorkerStatus::Connecting;
 
   lock.unlock();
@@ -178,13 +184,14 @@ bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
       static_cast<unsigned long>(command_id));
     return false;
   }
-  lock.unlock();
 
   const bool is_stop = command.type == FrankaCommandType::Stop;
   const bool accepted = command_manager_.enqueuePriority(std::move(command));
   if (accepted && is_stop) {
     abort_requested_.store(true);
   }
+  lock.unlock();
+
   if (!accepted) {
     RCLCPP_WARN(
       workerLogger(), "Comando prioritario %lu rifiutato: coda piena o in shutdown",
@@ -333,11 +340,15 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       message = success ? "Brakes closed" : "Failed to close brakes";
       break;
 
-    case FrankaCommandType::Stop:
-      abort_requested_.store(false);
+    case FrankaCommandType::Stop: {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        abort_requested_.store(false);
+      }
       success = franka_->stop();
       message = success ? "Robot stopped" : "Failed to stop robot";
       break;
+    }
 
     case FrankaCommandType::ExecuteNamedTask:
       success = franka_->executeNamedTask(command.parameter);

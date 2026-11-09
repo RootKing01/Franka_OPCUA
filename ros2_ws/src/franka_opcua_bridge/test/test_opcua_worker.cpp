@@ -197,6 +197,7 @@ TEST(OpcuaWorkerTest, StopWhenReadyDisconnectsWorker)
 
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
   EXPECT_FALSE(worker.enqueueCommand(command(1, FrankaCommandType::OpenBrakes)));
+  EXPECT_FALSE(worker.start());
 }
 
 TEST(OpcuaWorkerTest, ConnectFailureLeavesWorkerInError)

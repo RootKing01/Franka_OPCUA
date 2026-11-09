@@ -152,18 +152,22 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 
   result_timer_ = this->create_wall_timer(
     std::chrono::milliseconds(50),
-    [this]() {
-      while (auto result = worker_->tryGetResult()) {
-        std_msgs::msg::String message_result;
-        message_result.data =
-          "command_id=" + std::to_string(result->command_id) +
-          ";status=" + commandStatusName(result->status) +
-          ";message=" + result->message;
-        result_publisher_->publish(message_result);
-      }
-    });
+    [this]() {publishPendingResults();});
 
 
+}
+
+
+void FrankaBridgeNode::publishPendingResults()
+{
+  while (auto result = worker_->tryGetResult()) {
+    std_msgs::msg::String message_result;
+    message_result.data =
+      "command_id=" + std::to_string(result->command_id) +
+      ";status=" + commandStatusName(result->status) +
+      ";message=" + result->message;
+    result_publisher_->publish(message_result);
+  }
 }
 
 
@@ -300,7 +304,9 @@ void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr ms
 FrankaBridgeNode::~FrankaBridgeNode()
 {
   if (worker_) {
+    result_timer_.reset();
     worker_->stop();
+    publishPendingResults();
   }
 }
 
