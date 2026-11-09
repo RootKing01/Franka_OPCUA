@@ -102,7 +102,7 @@ void OpcuaWorker::stop()
     RCLCPP_INFO(workerLogger(), "Arresto worker richiesto");
 
     std::unique_lock<std::mutex> lock(mutex_);
-    lock.lock();
+    
     worker_state_ = WorkerStatus::Stopping;
 
     command_manager_.shutdown();

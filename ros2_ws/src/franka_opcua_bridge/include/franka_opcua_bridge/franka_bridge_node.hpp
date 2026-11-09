@@ -22,6 +22,10 @@ public:
 private:
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr command_subscription_;
 
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr result_publisher_;
+
+  rclcpp::TimerBase::SharedPtr result_timer_;
+
   std::unique_ptr<OpcuaWorker> worker_;
 
   std::atomic<std::uint64_t> next_command_id_{1};

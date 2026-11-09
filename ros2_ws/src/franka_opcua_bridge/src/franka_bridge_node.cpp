@@ -21,6 +21,29 @@ namespace franka_opcua_bridge
 namespace
 {
 
+const char * commandStatusName(FrankaCommandStatus status)
+{
+  switch (status) {
+    case FrankaCommandStatus::Accepted:
+      return "Accepted";
+    case FrankaCommandStatus::Completed:
+      return "Completed";
+    case FrankaCommandStatus::Rejected:
+      return "Rejected";
+    case FrankaCommandStatus::Failed:
+      return "Failed";
+    case FrankaCommandStatus::Cancelled:
+      return "Cancelled";
+    case FrankaCommandStatus::Timeout:
+      return "Timeout";
+    case FrankaCommandStatus::NotReady:
+      return "NotReady";
+    case FrankaCommandStatus::Disconnected:
+      return "Disconnected";
+  }
+  return "Unknown";
+}
+
 bool parseExplicitPoseCommand(
   const std::string & command,
   std::string & pose_id,
@@ -116,7 +139,33 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
     this->get_logger(),
     "In ascolto sul topic '%s'",
     topic_name.c_str());
+
+  // Topic dei risultati
+  const std::string result_topic = "/franka_" + robot_id + "/command_result";
+
+  result_publisher_ = this->create_publisher<std_msgs::msg::String>(result_topic, 10);
+
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Risultati in scrittura sul topic '%s'",
+    result_topic.c_str());
+
+  result_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(50),
+    [this]() {
+      while (auto result = worker_->tryGetResult()) {
+        std_msgs::msg::String message_result;
+        message_result.data =
+          "command_id=" + std::to_string(result->command_id) +
+          ";status=" + commandStatusName(result->status) +
+          ";message=" + result->message;
+        result_publisher_->publish(message_result);
+      }
+    });
+
+
 }
+
 
 
 void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr msg)
