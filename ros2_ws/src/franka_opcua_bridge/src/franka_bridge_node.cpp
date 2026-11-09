@@ -86,9 +86,11 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
   // Creazione astrazione Franka
   auto robot = std::make_unique<FrankaRobot>(std::move(client));
   auto * pose_storage = static_cast<IPoseStorage *>(robot.get());
+  auto * task_control = static_cast<ITaskControl *>(robot.get());
 
   //Creazione del worker
-  worker_ = std::make_unique<OpcuaWorker>(std::move(robot), pose_storage, 5);
+  worker_ = std::make_unique<OpcuaWorker>(
+    std::move(robot), pose_storage, 5, task_control);
 
   //Avvio del worker
   if (!worker_->start()) {

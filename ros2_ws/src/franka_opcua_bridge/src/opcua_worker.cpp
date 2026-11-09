@@ -20,9 +20,11 @@ rclcpp::Logger workerLogger()
 OpcuaWorker::OpcuaWorker(
   std::unique_ptr<IFranka> robot,
   IPoseStorage * pose_storage,
-  std::size_t command_capacity)
+  std::size_t command_capacity,
+  ITaskControl * task_control)
 : franka_(std::move(robot)),
   pose_storage_(pose_storage),
+  task_control_(task_control),
   command_manager_(command_capacity),
   worker_state_(WorkerStatus::Disconnected)
 {
@@ -349,6 +351,28 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       success = franka_->deactivateFCI();
       message = success ? "FCI deactivated" : "Failed to deactivate FCI";
       break;
+
+    case FrankaCommandType::SwitchToExec:
+      success = task_control_ != nullptr && task_control_->switchToExecution();
+      message = success ? "Switch to Execution mode completed" :
+        "Failed to switch to Execution mode";
+      break;
+
+    case FrankaCommandType::ShowTasks: {
+      if (task_control_ != nullptr) {
+        const std::vector<std::string> tasks_id = task_control_->showAvailableTasks();
+
+        RCLCPP_INFO(workerLogger(), "Task disponibili: %zu", tasks_id.size());
+
+        for (const auto & task_id : tasks_id) {
+          RCLCPP_INFO(workerLogger(), "ID: %s", task_id.c_str());
+        }
+
+        success = true;
+      }
+      message = success ? "Task list retrieved" : "Task control is unavailable";
+      break;
+    }
 
     default:
       result.status = FrankaCommandStatus::Rejected;

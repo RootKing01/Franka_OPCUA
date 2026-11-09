@@ -23,7 +23,9 @@ enum class FrankaCommandType
   SaveCurrentPose,
   SaveExplicitPose,
   ActivateFci,
-  DeactivateFci
+  DeactivateFci,
+  ShowTasks,
+  SwitchToExec
 
 };
 

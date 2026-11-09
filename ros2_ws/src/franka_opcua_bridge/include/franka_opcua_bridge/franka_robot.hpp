@@ -13,6 +13,7 @@
 #include "franka_opcua_bridge/interfaces/i_franka.hpp"
 #include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
 #include "franka_opcua_bridge/interfaces/i_pose_storage.hpp"
+#include "franka_opcua_bridge/interfaces/i_task_control.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 
 namespace franka_opcua_bridge
@@ -25,7 +26,7 @@ struct FrankaRobotStatus : public RobotStatus
 
 };
 
-class FrankaRobot : public IFranka, public IPoseStorage
+class FrankaRobot : public IFranka, public IPoseStorage, public ITaskControl
 {
 
 public:
@@ -68,9 +69,9 @@ public:
     const std::string & pose_id,
     const geometry_msgs::msg::Pose & pose) override;
 
-  bool switchToExecution();
+  bool switchToExecution() override;
 
-  std::vector<std::string> showAvailableTasks();
+  std::vector<std::string> showAvailableTasks() override;
 
   /*
   template<typename T>
