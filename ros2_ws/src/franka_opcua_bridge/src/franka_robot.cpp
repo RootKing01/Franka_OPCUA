@@ -73,6 +73,12 @@ bool FrankaRobot::stop()
 
   CallResult result = client_->callMethod(kExecutionControlPath, "StopTask", {});
 
+  std::cerr << "[STOP] StopTask result=" << (result.ok ? "success" : "failure");
+  if (!result.ok) {
+    std::cerr << ", OPC UA error='" << result.error_message << "'";
+  }
+  std::cerr << std::endl;
+
   return result.ok;
 }
 
@@ -304,7 +310,7 @@ geometry_msgs::msg::Wrench FrankaRobot::readWrench()
 
 }
 
-bool FrankaRobot::moveToNamedPose(
+MotionResult FrankaRobot::moveToNamedPose(
   const std::string & pose_id,
   const std::function<bool()> & should_abort)
 {
@@ -326,24 +332,24 @@ bool FrankaRobot::moveToNamedPose(
             << std::endl;
 
   if (!result.ok) {
-    return false;
+    return {MotionOutcome::Failed, "Failed to read saved pose: " + result.error_message};
   }
 
   // Il metodo Read deve restituire almeno un valore
   if (result.output_values.empty()) {
-    return false;
+    return {MotionOutcome::Failed, "Saved pose read returned no values"};
   }
 
   // Il valore restituito deve essere un vector<double>
   if (!result.output_values[0].is<std::vector<double>>()) {
-    return false;
+    return {MotionOutcome::Failed, "Saved pose has an unexpected data type"};
   }
 
   const std::vector<double> & values = result.output_values[0].as<std::vector<double>>();
 
   // Una posa Franka è una matrice 4x4 = 16 double
   if (values.size() != 16) {
-    return false;
+    return {MotionOutcome::Failed, "Saved pose must contain 16 values"};
   }
 
   // Costruzione del KeyPosePair:
@@ -351,7 +357,7 @@ bool FrankaRobot::moveToNamedPose(
   // Value = matrice 4x4 (16 double)
 
   if (!buildKeyPosePair("target_pose", values)) {
-    return false;
+    return {MotionOutcome::Failed, "Failed to write target pose"};
   }
 
   // Avvia il task che utilizza target_pose
@@ -363,7 +369,7 @@ bool FrankaRobot::moveToNamedPose(
             << task_result << std::endl;
 
   if (!task_result) {
-    return false;
+    return {MotionOutcome::Failed, "Failed to start opcua_goto task"};
   }
 
   constexpr auto kPollingPeriod = std::chrono::milliseconds(100);
@@ -371,28 +377,29 @@ bool FrankaRobot::moveToNamedPose(
   bool task_started = false;
 
   while (std::chrono::steady_clock::now() < deadline) {
-    if (should_abort && should_abort()) {
-      stop();
-      return false;
-    }
-
     const auto status = readStatus();
 
-    if (!status || status->has_error) {
-      return false;
+    if (!status) {
+      return {MotionOutcome::Failed, "Failed to read robot execution status"};
+    }
+    if (status->has_error) {
+      return {MotionOutcome::Failed, status->error_message};
+    }
+    if (should_abort && should_abort()) {
+      return {MotionOutcome::Cancelled, "Motion cancelled by stop request"};
     }
 
     if (status->is_running || status->active_task_name == "opcua_goto") {
       task_started = true;
     } else if (task_started) {
-      return true;
+      return {MotionOutcome::Completed, "Pose reached"};
     }
 
     std::this_thread::sleep_for(kPollingPeriod);
   }
 
   stop();
-  return false;
+  return {MotionOutcome::Timeout, "Timed out while waiting for pose motion to finish"};
 }
 
 std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose & pose)

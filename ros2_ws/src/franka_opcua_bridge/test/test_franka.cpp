@@ -13,6 +13,7 @@ using franka_opcua_bridge::Value;
 using franka_opcua_bridge::FrankaRobotStatus;
 using franka_opcua_bridge::ExecutionStatusValue;
 using franka_opcua_bridge::KeyPosePairValue;
+using franka_opcua_bridge::MotionOutcome;
 
 namespace
 {
@@ -392,8 +393,8 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, false, "", "", ""}));
 
-  bool movePoseSuccess = robot.moveToNamedPose(pose_id);
-  ASSERT_TRUE(movePoseSuccess);
+  const auto move_result = robot.moveToNamedPose(pose_id);
+  ASSERT_EQ(move_result.outcome, MotionOutcome::Completed);
 
   const auto & log = fake_ptr->callLog();
   ASSERT_EQ(log.size(), 3u);
@@ -426,6 +427,58 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
   EXPECT_EQ(target_pose.value, received_pose);
   EXPECT_EQ(log[2].method_name, "StartTask");
 
+}
+
+TEST(FrankaRobotTest, ControllerFaultIsNotReportedAsCancellation)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  const std::string pose_id = "p0";
+  const std::vector<std::string> pose_path{
+    "Robot", "KeyValueMaps", "KeyPoseMap", "Read", pose_id};
+  const std::string collision_error =
+    "Moving failed: the defined force limits for collision detection have been exceeded";
+
+  FrankaRobot robot(std::move(fake_client));
+  ASSERT_TRUE(robot.connect());
+
+  fake_ptr->writeValue(pose_path, Value(std::vector<double>(16, 0.0)));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{true, false, collision_error, "", ""}));
+
+  const auto result = robot.moveToNamedPose(pose_id, []() {return true;});
+
+  EXPECT_EQ(result.outcome, MotionOutcome::Failed);
+  EXPECT_EQ(result.message, collision_error);
+
+  const auto & calls = fake_ptr->callLog();
+  ASSERT_EQ(calls.size(), 3u);
+  EXPECT_EQ(calls[2].method_name, "StartTask");
+}
+
+TEST(FrankaRobotTest, StopRequestCancelsMoveWithoutCallingStopTask)
+{
+  auto fake_client = std::make_unique<FakeProtocolClient>();
+  FakeProtocolClient * fake_ptr = fake_client.get();
+  const std::string pose_id = "p0";
+  const std::vector<std::string> pose_path{
+    "Robot", "KeyValueMaps", "KeyPoseMap", "Read", pose_id};
+
+  FrankaRobot robot(std::move(fake_client));
+  ASSERT_TRUE(robot.connect());
+
+  fake_ptr->writeValue(pose_path, Value(std::vector<double>(16, 0.0)));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, true, "", "opcua_goto", "task_0"}));
+
+  const auto result = robot.moveToNamedPose(pose_id, []() {return true;});
+
+  EXPECT_EQ(result.outcome, MotionOutcome::Cancelled);
+  const auto & calls = fake_ptr->callLog();
+  ASSERT_EQ(calls.size(), 3u);
+  EXPECT_EQ(calls.back().method_name, "StartTask");
 }
 
 

@@ -34,6 +34,8 @@ const char * commandStatusName(FrankaCommandStatus status)
       return "Failed";
     case FrankaCommandStatus::Cancelled:
       return "Cancelled";
+    case FrankaCommandStatus::NotNeeded:
+      return "NotNeeded";
     case FrankaCommandStatus::Timeout:
       return "Timeout";
     case FrankaCommandStatus::NotReady:

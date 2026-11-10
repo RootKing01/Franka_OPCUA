@@ -31,15 +31,19 @@ bool FakeRobot::executeNamedTask(const std::string & task_id)
   return true;
 }
 
-bool FakeRobot::moveToNamedPose(
+MotionResult FakeRobot::moveToNamedPose(
   const std::string & pose_id,
   const std::function<bool()> & should_abort)
 {
-  if (should_abort && should_abort()) {return false;}
-  if (!brakes_open_) {return false;}
+  if (should_abort && should_abort()) {
+    return {MotionOutcome::Cancelled, "Motion cancelled by request"};
+  }
+  if (!brakes_open_) {
+    return {MotionOutcome::Failed, "Brakes are closed"};
+  }
   last_pose_ = pose_id;
   last_task_ = "opcua_goto";
-  return true;
+  return {MotionOutcome::Completed, "Pose reached"};
 }
 
 std::unique_ptr<RobotStatus> FakeRobot::readStatus()

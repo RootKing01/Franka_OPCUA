@@ -3,6 +3,7 @@
 
 using franka_opcua_bridge::FakeRobot;
 using franka_opcua_bridge::IFranka;
+using franka_opcua_bridge::MotionOutcome;
 
 TEST(FakeRobotTest, ConnectSetsConnectedState)
 {
@@ -78,7 +79,7 @@ TEST(FakeRobotTest, MoveToNamedPoseUpdatesStatus)
   FakeRobot robot;
   robot.connect();
   robot.openBrakes();
-  EXPECT_TRUE(robot.moveToNamedPose("p0"));
+  EXPECT_EQ(robot.moveToNamedPose("p0").outcome, MotionOutcome::Completed);
   EXPECT_EQ(robot.lastPoseTarget(), "p0");
 }
 

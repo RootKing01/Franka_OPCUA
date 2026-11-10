@@ -176,6 +176,7 @@ bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
 {
 
   const auto command_id = command.command_id;
+  const bool is_stop = command.type == FrankaCommandType::Stop;
 
   std::unique_lock<std::mutex> lock(mutex_);
   if (worker_state_ != WorkerStatus::Ready) {
@@ -185,9 +186,17 @@ bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
     return false;
   }
 
-  const bool is_stop = command.type == FrankaCommandType::Stop;
+  if (is_stop && stop_pending_) {
+    RCLCPP_WARN(
+      workerLogger(), "Comando stop %lu rifiutato: uno stop e' gia' pendente",
+      static_cast<unsigned long>(command_id));
+    return false;
+  }
+
   const bool accepted = command_manager_.enqueuePriority(std::move(command));
   if (accepted && is_stop) {
+    stop_pending_ = true;
+    stop_not_needed_ = false;
     abort_requested_.store(true);
   }
   lock.unlock();
@@ -341,11 +350,32 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       break;
 
     case FrankaCommandType::Stop: {
+      bool stop_needed = true;
       {
         std::lock_guard<std::mutex> lock(mutex_);
-        abort_requested_.store(false);
+        stop_needed = !stop_not_needed_;
+        if (!stop_needed) {
+          stop_not_needed_ = false;
+          stop_pending_ = false;
+          abort_requested_.store(false);
+        } else {
+          abort_requested_.store(false);
+        }
       }
+      if (!stop_needed) {
+        result.status = FrankaCommandStatus::NotNeeded;
+        result.message = "Stop not needed: motion had already terminated";
+        result.finished_at = std::chrono::steady_clock::now();
+        return result;
+      }
+      RCLCPP_INFO(
+        workerLogger(), "Comando stop %lu: invocazione di StopTask",
+        static_cast<unsigned long>(command.command_id));
       success = franka_->stop();
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        stop_pending_ = false;
+      }
       message = success ? "Robot stopped" : "Failed to stop robot";
       break;
     }
@@ -355,12 +385,42 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       message = success ? "Task executed" : "Failed to execute task";
       break;
 
-    case FrankaCommandType::MoveToNamedPose:
-      success = franka_->moveToNamedPose(
+    case FrankaCommandType::MoveToNamedPose: {
+      const MotionResult motion = franka_->moveToNamedPose(
         command.parameter,
         [this]() {return abort_requested_.load();});
-      message = success ? "Pose reached" : "Failed to reach pose";
-      break;
+      if (motion.outcome != MotionOutcome::Cancelled) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (stop_pending_ && abort_requested_.load()) {
+          stop_not_needed_ = true;
+        }
+      }
+      result.message = motion.message;
+      switch (motion.outcome) {
+        case MotionOutcome::Completed:
+          result.status = FrankaCommandStatus::Completed;
+          break;
+        case MotionOutcome::Cancelled:
+          result.status = FrankaCommandStatus::Cancelled;
+          break;
+        case MotionOutcome::Failed:
+          result.status = FrankaCommandStatus::Failed;
+          break;
+        case MotionOutcome::Timeout:
+          result.status = FrankaCommandStatus::Timeout;
+          break;
+      }
+      result.finished_at = std::chrono::steady_clock::now();
+      if (result.status == FrankaCommandStatus::Failed ||
+        result.status == FrankaCommandStatus::Timeout)
+      {
+        RCLCPP_ERROR(
+          workerLogger(), "Comando movimento %lu terminato con stato %d: %s",
+          static_cast<unsigned long>(command.command_id),
+          static_cast<int>(result.status), result.message.c_str());
+      }
+      return result;
+    }
 
     case FrankaCommandType::SaveCurrentPose:
       success = pose_storage_ != nullptr && pose_storage_->savePose(command.parameter);

@@ -67,6 +67,8 @@ private:
   std::thread worker_thread_;
   WorkerStatus worker_state_;
   bool start_attempted_{false};
+  bool stop_pending_{false};
+  bool stop_not_needed_{false};
   std::atomic_bool abort_requested_{false};
 
 

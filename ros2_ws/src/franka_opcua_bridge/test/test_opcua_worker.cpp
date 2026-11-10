@@ -17,6 +17,8 @@ using franka_opcua_bridge::FrankaRobotCommand;
 using franka_opcua_bridge::IFranka;
 using franka_opcua_bridge::OpcuaWorker;
 using franka_opcua_bridge::RobotStatus;
+using franka_opcua_bridge::MotionOutcome;
+using franka_opcua_bridge::MotionResult;
 using franka_opcua_bridge::WorkerStatus;
 
 namespace
@@ -45,13 +47,13 @@ public:
   bool areBrakesOpen() override {return false;}
   bool stop() override
   {
-    stop_called_.store(true);
+    stop_call_count_.fetch_add(1);
     return true;
   }
 
   bool executeNamedTask(const std::string &) override {return true;}
 
-  bool moveToNamedPose(
+  MotionResult moveToNamedPose(
     const std::string &,
     const std::function<bool()> & should_abort) override
   {
@@ -66,7 +68,12 @@ public:
       condition_.wait_for(lock, std::chrono::milliseconds(10));
     }
     move_interrupted_ = true;
-    return false;
+    if (collision_after_abort_.load()) {
+      return {
+        MotionOutcome::Failed,
+        "Moving failed: the defined force limits for collision detection have been exceeded"};
+    }
+    return {MotionOutcome::Cancelled, "Motion cancelled by stop request"};
   }
 
   bool activateFCI() override {return true;}
@@ -90,7 +97,8 @@ public:
   }
 
   bool moveWasInterrupted() const {return move_interrupted_;}
-  bool stopWasCalled() const {return stop_called_;}
+  int stopCallCount() const {return stop_call_count_;}
+  void setCollisionAfterAbort(bool value) {collision_after_abort_.store(value);}
 
 private:
   bool connected_ = false;
@@ -98,7 +106,8 @@ private:
   std::condition_variable condition_;
   bool move_entered_ = false;
   std::atomic_bool move_interrupted_{false};
-  std::atomic_bool stop_called_{false};
+  std::atomic_bool collision_after_abort_{false};
+  std::atomic_int stop_call_count_{0};
 };
 
 class FailingRobot final : public BlockingRobot
@@ -165,13 +174,13 @@ TEST(OpcuaWorkerTest, StopInterruptsBlockingMove)
 
   auto move_result = waitForResult(worker, 1);
   ASSERT_TRUE(move_result.has_value());
-  EXPECT_EQ(move_result->status, FrankaCommandStatus::Failed);
+  EXPECT_EQ(move_result->status, FrankaCommandStatus::Cancelled);
   EXPECT_TRUE(robot_ptr->moveWasInterrupted());
 
   auto stop_result = waitForResult(worker, 2);
   ASSERT_TRUE(stop_result.has_value());
   EXPECT_EQ(stop_result->status, FrankaCommandStatus::Completed);
-  EXPECT_TRUE(robot_ptr->stopWasCalled());
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
 
   worker.stop();
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
@@ -198,6 +207,33 @@ TEST(OpcuaWorkerTest, StopWhenReadyDisconnectsWorker)
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
   EXPECT_FALSE(worker.enqueueCommand(command(1, FrankaCommandType::OpenBrakes)));
   EXPECT_FALSE(worker.start());
+}
+
+TEST(OpcuaWorkerTest, PreservesControllerFaultAsMoveFailure)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setCollisionAfterAbort(true);
+  OpcuaWorker worker(std::move(robot), nullptr, 2);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(worker.enqueueCommand(command(7, FrankaCommandType::MoveToNamedPose, "p0")));
+  ASSERT_TRUE(robot_ptr->waitUntilMoveEntered());
+  ASSERT_TRUE(worker.enqueuePriority(command(8, FrankaCommandType::Stop)));
+
+  auto result = waitForResult(worker, 7);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->status, FrankaCommandStatus::Failed);
+  EXPECT_EQ(
+    result->message,
+    "Moving failed: the defined force limits for collision detection have been exceeded");
+
+  auto stop_result = waitForResult(worker, 8);
+  ASSERT_TRUE(stop_result.has_value());
+  EXPECT_EQ(stop_result->status, FrankaCommandStatus::NotNeeded);
+  EXPECT_EQ(robot_ptr->stopCallCount(), 0);
+
+  worker.stop();
 }
 
 TEST(OpcuaWorkerTest, ConnectFailureLeavesWorkerInError)

@@ -17,6 +17,7 @@ enum class FrankaCommandStatus
   Rejected,
   Failed,
   Cancelled,
+  NotNeeded,
   Timeout,
   NotReady,
   Disconnected

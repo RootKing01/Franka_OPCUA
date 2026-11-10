@@ -188,12 +188,14 @@ CallResult OpcuaClient::callMethod(
   if (status != UA_STATUSCODE_GOOD) {
     std::cout << "[OPCUA] UA_Client_call failed: " << UA_StatusCode_name(status) << "(" << status <<
       ")" << std::endl;
+    result.error_message = std::string(UA_StatusCode_name(status)) + "(" +
+      std::to_string(status) + ")";
 
     UA_Array_delete(inputs, inputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     UA_NodeId_clear(&object_id);
     UA_NodeId_clear(&method_id);
 
-    return CallResult{};
+    return result;
   }
 
   result.ok = true;
