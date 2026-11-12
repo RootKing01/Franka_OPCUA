@@ -101,4 +101,18 @@ bool FakeRobot::deactivateFCI()
   return connected_;
 }
 
+std::optional<namespaceTree> FakeRobot::showAddressSpaceNodes()
+{
+  if (!connected_) {
+    return std::nullopt;
+  }
+
+  namespaceTree root;
+  root.browseName = "RootFolder";
+  root.displayName = "Root";
+  root.nodeId = "ns=0;i=84";
+  root.nodekind = NodeKind::Object;
+  return root;
+}
+
 }  // namespace franka_opcua_bridge

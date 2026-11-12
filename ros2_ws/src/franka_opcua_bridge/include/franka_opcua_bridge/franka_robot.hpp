@@ -15,6 +15,7 @@
 #include "franka_opcua_bridge/interfaces/i_pose_storage.hpp"
 #include "franka_opcua_bridge/interfaces/i_task_control.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
+#include "franka_opcua_bridge/opcua_namespace_tree.hpp"
 
 namespace franka_opcua_bridge
 {
@@ -72,6 +73,8 @@ public:
   bool switchToExecution() override;
 
   std::vector<std::string> showAvailableTasks() override;
+
+  std::optional<namespaceTree> showAddressSpaceNodes() override;
 
   /*
   template<typename T>

@@ -52,6 +52,7 @@ public:
 
   std::optional<FrankaCommandResult> tryGetResult();
   std::optional<FrankaCommandResult> waitAndPopResult();
+  void printTree(const namespaceTree &node, std::size_t depth = 0);
 
   WorkerStatus status() const;
 

@@ -448,7 +448,22 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       message = success ? "Switch to Execution mode completed" :
         "Failed to switch to Execution mode";
       break;
+    
+    case FrankaCommandType::ShowAddressSpaceNodes:{
+      auto rootNode = franka_->showAddressSpaceNodes();
+      
+      if (!rootNode){
+        success = false;
+        message = "Address space nodes tree not loaded, something went wrong";
 
+      }
+      else{
+        success = true;
+        message = "Addrress space correctly explored";
+        printTree(*rootNode);
+      }
+      break;
+    }
     case FrankaCommandType::ShowTasks: {
       if (task_control_ != nullptr) {
         const std::vector<std::string> tasks_id = task_control_->showAvailableTasks();
@@ -533,6 +548,7 @@ std::optional<FrankaCommandResult> OpcuaWorker::waitAndPopResult()
 }
 
 
+
 WorkerStatus OpcuaWorker::status() const
 {
 
@@ -544,6 +560,17 @@ WorkerStatus OpcuaWorker::status() const
 
 
 }
+
+void OpcuaWorker::printTree(const namespaceTree &node, std::size_t depth)
+{
+  std::cout << std::string(depth * 2, ' ')
+            << node.browseName << " (" << node.displayName << ")\n";
+
+  for (const namespaceTree &child : node.children) {
+    printTree(child, depth + 1);
+  }
+}
+
 
 
 }

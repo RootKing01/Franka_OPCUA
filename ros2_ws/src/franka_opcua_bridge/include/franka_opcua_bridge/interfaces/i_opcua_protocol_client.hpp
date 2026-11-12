@@ -2,7 +2,10 @@
 #define FRANKA_OPCUA_BRIDGE__INTERFACES__I_OPCUA_PROTOCOL_CLIENT_
 
 #include "franka_opcua_bridge/interfaces/i_protocol_client.hpp"
+#include "franka_opcua_bridge/opcua_namespace_tree.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
+
+#include <optional>
 
 namespace franka_opcua_bridge
 {
@@ -29,6 +32,8 @@ public:
 
     const std::vector<std::string> & variable_browse_path,
     const Value & out_value) = 0;
+
+  virtual std::optional<namespaceTree> exploreAddressSpace() = 0;
 
 
 };

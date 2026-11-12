@@ -42,6 +42,8 @@ public:
     const std::vector<std::string> & variable_browse_path,
     const Value & value) override;
 
+  std::optional<namespaceTree> exploreAddressSpace() override;
+
   void queueValue(const std::vector<std::string> & variable_browse_path, const Value & value);
 
   const std::vector<CallRecord> & callLog() const {return call_log_;}

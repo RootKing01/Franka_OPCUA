@@ -3,6 +3,7 @@
 
 #include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
+#include "franka_opcua_bridge/opcua_namespace_tree.hpp"
 
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
@@ -12,6 +13,7 @@
 #include <opc_ua_service_types_generated.h>
 #include <stdlib.h>
 #include <cstring>
+#include <optional>
 
 namespace franka_opcua_bridge
 {
@@ -30,6 +32,7 @@ public:
   bool connect() override;
   bool disconnect() override;
   bool isConnected() const override;
+  std::optional<namespaceTree> exploreAddressSpace() override;
 
   //Il distruttore fa cleanup
   ~OpcuaClient() override;
@@ -51,6 +54,7 @@ public:
     const std::vector<std::string> & variable_browse_path,
     const Value & out_value) override;
 
+  NodeKind toNodeKind(UA_NodeClass nodeClass);
 private:
   std::string endpoint_;
   std::string user_;
@@ -93,8 +97,6 @@ private:
     UA_Client * client,
     const std::vector<std::string> & browse_path,
     UA_NodeId & out_node_id);
-
-  UA_BrowseRequest exploreAddressSpace(UA_Client * client);
 
   void writeKeyIntPair(UA_Client * client, std::string key, int value);
 

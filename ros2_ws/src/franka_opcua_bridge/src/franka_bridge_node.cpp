@@ -257,6 +257,10 @@ void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr ms
   }else if(command == "switch_exec"){
 
     enqueueCommand(FrankaCommandType::SwitchToExec);
+  
+  }else if(command == "show_address_space_nodes"){
+
+    enqueueCommand(FrankaCommandType::ShowAddressSpaceNodes);
 
   } else if (command == "stop") {
 

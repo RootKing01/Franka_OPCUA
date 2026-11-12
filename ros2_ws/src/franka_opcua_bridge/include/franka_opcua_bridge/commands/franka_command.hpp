@@ -25,6 +25,7 @@ enum class FrankaCommandType
   ActivateFci,
   DeactivateFci,
   ShowTasks,
+  ShowAddressSpaceNodes,
   SwitchToExec
 
 };

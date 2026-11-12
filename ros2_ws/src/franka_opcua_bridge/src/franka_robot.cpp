@@ -582,4 +582,11 @@ std::vector<std::string> FrankaRobot::showAvailableTasks(){
 }
 
 
+std::optional<namespaceTree> FrankaRobot::showAddressSpaceNodes(){
+
+  return client_->exploreAddressSpace();
+
+}
+
+
 }

@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <algorithm>
+#include <functional>
+#include <set>
+#include <utility>
 
 
 namespace franka_opcua_bridge
@@ -809,5 +812,291 @@ bool OpcuaClient::TranslateBrowsePathtoNodeId(
   return true;
 }
 
+NodeKind OpcuaClient::toNodeKind(UA_NodeClass nodeClass)
+{
+  switch (nodeClass) {
+    case UA_NODECLASS_UNSPECIFIED:
+      return NodeKind::Unspecified;
+    case UA_NODECLASS_OBJECT:
+      return NodeKind::Object;
+    case UA_NODECLASS_VARIABLE:
+      return NodeKind::Variable;
+    case UA_NODECLASS_METHOD:
+      return NodeKind::Method;
+    case UA_NODECLASS_OBJECTTYPE:
+      return NodeKind::ObjectType;
+    case UA_NODECLASS_VARIABLETYPE:
+      return NodeKind::VariableType;
+    case UA_NODECLASS_REFERENCETYPE:
+      return NodeKind::ReferenceType;
+    case UA_NODECLASS_DATATYPE:
+      return NodeKind::DataType;
+    case UA_NODECLASS_VIEW:
+      return NodeKind::View;
+    default:
+      return NodeKind::Unknown;
+  }
+}
+
+
+
+std::optional<namespaceTree> OpcuaClient::exploreAddressSpace()
+{
+  if (client_ == nullptr) {
+    std::cerr << "[OPCUA browse] Impossibile iniziare: client non connesso o nullo"
+              << std::endl;
+    return std::nullopt;
+  }
+
+  std::cerr << "[OPCUA browse] Avvio esplorazione da RootFolder (ns=0;i=84)"
+            << std::endl;
+
+  auto nodeIdToString = [](const UA_NodeId & node_id) {
+      UA_String encoded;
+      UA_String_init(&encoded);
+      const UA_StatusCode status = UA_NodeId_print(&node_id, &encoded);
+      if (status != UA_STATUSCODE_GOOD) {
+        UA_String_clear(&encoded);
+        return std::string{};
+      }
+
+      std::string result(reinterpret_cast<const char *>(encoded.data), encoded.length);
+      UA_String_clear(&encoded);
+      return result;
+    };
+
+  std::set<std::string> visited;
+  std::function<bool(const UA_NodeId &, namespaceTree &)> browseNode;
+  std::function<bool(const UA_BrowseResult &, namespaceTree &)> appendReferences;
+
+  appendReferences = [&](const UA_BrowseResult & result, namespaceTree & parent) {
+      if (result.referencesSize > 0 && result.references == nullptr) {
+        std::cerr << "[OPCUA browse] Risposta incoerente: referencesSize="
+                  << result.referencesSize << " ma references e' nullo per il nodo "
+                  << parent.nodeId << std::endl;
+        return false;
+      }
+
+      for (size_t index = 0; index < result.referencesSize; ++index) {
+        const UA_ReferenceDescription & reference = result.references[index];
+        namespaceTree child;
+        child.browseName = UA_StringConversion(reference.browseName.name);
+        child.displayName = UA_StringConversion(reference.displayName.text);
+        child.nodekind = toNodeKind(reference.nodeClass);
+        child.referenceType = nodeIdToString(reference.referenceTypeId);
+        child.nodeId = nodeIdToString(reference.nodeId.nodeId);
+
+        if (child.nodeId.empty()) {
+          std::cerr << "[OPCUA browse] Conversione NodeId fallita per un riferimento figlio di "
+                    << parent.nodeId << std::endl;
+          return false;
+        }
+
+        UA_NodeId child_node_id;
+        UA_NodeId_init(&child_node_id);
+        UA_StatusCode status = UA_NodeId_copy(&reference.nodeId.nodeId, &child_node_id);
+        if (status != UA_STATUSCODE_GOOD) {
+          std::cerr << "[OPCUA browse] Copia NodeId fallita per " << child.nodeId
+                    << ": " << UA_StatusCode_name(status) << std::endl;
+          return false;
+        }
+
+        const bool local_node = reference.nodeId.serverIndex == 0 &&
+          reference.nodeId.namespaceUri.length == 0;
+        const bool first_visit = visited.insert(child.nodeId).second;
+        if (local_node && first_visit && !browseNode(child_node_id, child)) {
+          std::cerr << "[OPCUA browse] Esplorazione ricorsiva fallita sul nodo "
+                    << child.nodeId << " (" << child.browseName << ")"
+                    << std::endl;
+          UA_NodeId_clear(&child_node_id);
+          return false;
+        }
+
+        UA_NodeId_clear(&child_node_id);
+        parent.children.push_back(std::move(child));
+      }
+
+      return true;
+    };
+
+  browseNode = [&](const UA_NodeId & node_id, namespaceTree & node) {
+      UA_BrowseRequest request;
+      UA_BrowseRequest_init(&request);
+      request.nodesToBrowse = static_cast<UA_BrowseDescription *>(
+        UA_Array_new(1, &UA_TYPES[UA_TYPES_BROWSEDESCRIPTION]));
+      if (request.nodesToBrowse == nullptr) {
+        std::cerr << "[OPCUA browse] Allocazione BrowseDescription fallita per il nodo "
+                  << nodeIdToString(node_id) << std::endl;
+        UA_BrowseRequest_clear(&request);
+        return false;
+      }
+
+      request.nodesToBrowseSize = 1;
+      UA_BrowseDescription_init(&request.nodesToBrowse[0]);
+      UA_StatusCode status = UA_NodeId_copy(&node_id, &request.nodesToBrowse[0].nodeId);
+      if (status != UA_STATUSCODE_GOOD) {
+        std::cerr << "[OPCUA browse] Copia NodeId nella richiesta fallita per "
+                  << nodeIdToString(node_id) << ": " << UA_StatusCode_name(status)
+                  << std::endl;
+        UA_BrowseRequest_clear(&request);
+        return false;
+      }
+
+      request.nodesToBrowse[0].browseDirection = UA_BROWSEDIRECTION_FORWARD;
+      request.nodesToBrowse[0].referenceTypeId =
+        UA_NODEID_NUMERIC(0, UA_NS0ID_HIERARCHICALREFERENCES);
+      request.nodesToBrowse[0].includeSubtypes = true;
+      request.nodesToBrowse[0].nodeClassMask = 0;
+      request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;
+
+      UA_BrowseResponse response = UA_Client_Service_browse(client_, request);
+      if (response.responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+        std::cerr << "[OPCUA browse] Browse Service fallito per "
+                  << nodeIdToString(node_id) << ": "
+                  << UA_StatusCode_name(response.responseHeader.serviceResult)
+                  << std::endl;
+        UA_BrowseResponse_clear(&response);
+        UA_BrowseRequest_clear(&request);
+        return false;
+      }
+      if (response.resultsSize == 0 || response.results == nullptr) {
+        std::cerr << "[OPCUA browse] Browse non ha restituito un risultato per "
+                  << nodeIdToString(node_id) << " (resultsSize="
+                  << response.resultsSize << ")" << std::endl;
+        UA_BrowseResponse_clear(&response);
+        UA_BrowseRequest_clear(&request);
+        return false;
+      }
+      if (response.results[0].statusCode != UA_STATUSCODE_GOOD) {
+        std::cerr << "[OPCUA browse] Browse del nodo " << nodeIdToString(node_id)
+                  << " fallito: "
+                  << UA_StatusCode_name(response.results[0].statusCode) << std::endl;
+        UA_BrowseResponse_clear(&response);
+        UA_BrowseRequest_clear(&request);
+        return false;
+      }
+
+      UA_BrowseNextResponse next_response;
+      UA_BrowseNextResponse_init(&next_response);
+      bool has_next_response = false;
+      const UA_BrowseResult * current_result = &response.results[0];
+
+      while (true) {
+        const UA_BrowseResult & result = *current_result;
+        if (!appendReferences(result, node)) {
+          if (has_next_response) {
+            UA_BrowseNextResponse_clear(&next_response);
+          } else {
+            UA_BrowseResponse_clear(&response);
+          }
+          UA_BrowseRequest_clear(&request);
+          return false;
+        }
+
+        if (result.continuationPoint.length == 0) {
+          break;
+        }
+
+        UA_BrowseNextRequest next_request;
+        UA_BrowseNextRequest_init(&next_request);
+        next_request.continuationPoints = static_cast<UA_ByteString *>(
+          UA_Array_new(1, &UA_TYPES[UA_TYPES_BYTESTRING]));
+        if (next_request.continuationPoints == nullptr) {
+          std::cerr << "[OPCUA browse] Allocazione BrowseNext fallita per il nodo "
+                    << nodeIdToString(node_id) << std::endl;
+          UA_BrowseNextRequest_clear(&next_request);
+          if (has_next_response) {
+            UA_BrowseNextResponse_clear(&next_response);
+          } else {
+            UA_BrowseResponse_clear(&response);
+          }
+          UA_BrowseRequest_clear(&request);
+          return false;
+        }
+
+        next_request.continuationPointsSize = 1;
+        status = UA_ByteString_copy(
+          &result.continuationPoint, &next_request.continuationPoints[0]);
+        if (status != UA_STATUSCODE_GOOD) {
+          std::cerr << "[OPCUA browse] Copia continuation point fallita per il nodo "
+                    << nodeIdToString(node_id) << ": " << UA_StatusCode_name(status)
+                    << std::endl;
+          UA_BrowseNextRequest_clear(&next_request);
+          if (has_next_response) {
+            UA_BrowseNextResponse_clear(&next_response);
+          } else {
+            UA_BrowseResponse_clear(&response);
+          }
+          UA_BrowseRequest_clear(&request);
+          return false;
+        }
+
+        if (has_next_response) {
+          UA_BrowseNextResponse_clear(&next_response);
+        } else {
+          UA_BrowseResponse_clear(&response);
+        }
+        next_response = UA_Client_Service_browseNext(client_, next_request);
+        UA_BrowseNextRequest_clear(&next_request);
+        has_next_response = true;
+
+        if (next_response.responseHeader.serviceResult != UA_STATUSCODE_GOOD ||
+          next_response.resultsSize == 0 || next_response.results == nullptr ||
+          next_response.results[0].statusCode != UA_STATUSCODE_GOOD)
+        {
+          if (next_response.responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+            std::cerr << "[OPCUA browse] BrowseNext Service fallito per "
+                      << nodeIdToString(node_id) << ": "
+                      << UA_StatusCode_name(next_response.responseHeader.serviceResult)
+                      << std::endl;
+          } else if (next_response.resultsSize == 0 || next_response.results == nullptr) {
+            std::cerr << "[OPCUA browse] BrowseNext non ha restituito un risultato per "
+                      << nodeIdToString(node_id) << std::endl;
+          } else {
+            std::cerr << "[OPCUA browse] BrowseNext del nodo " << nodeIdToString(node_id)
+                      << " fallito: "
+                      << UA_StatusCode_name(next_response.results[0].statusCode)
+                      << std::endl;
+          }
+          UA_BrowseNextResponse_clear(&next_response);
+          UA_BrowseRequest_clear(&request);
+          return false;
+        }
+
+        current_result = &next_response.results[0];
+      }
+
+      if (has_next_response) {
+        UA_BrowseNextResponse_clear(&next_response);
+      } else {
+        UA_BrowseResponse_clear(&response);
+      }
+      UA_BrowseRequest_clear(&request);
+      return true;
+    };
+
+  UA_NodeId root_id = UA_NODEID_NUMERIC(0, UA_NS0ID_ROOTFOLDER);
+  namespaceTree root;
+  root.browseName = "RootFolder";
+  root.displayName = "Root";
+  root.nodekind = NodeKind::Object;
+  root.nodeId = nodeIdToString(root_id);
+  if (root.nodeId.empty()) {
+    std::cerr << "[OPCUA browse] Conversione del NodeId di RootFolder fallita"
+              << std::endl;
+    return std::nullopt;
+  }
+
+  visited.insert(root.nodeId);
+  if (!browseNode(root_id, root)) {
+    std::cerr << "[OPCUA browse] Esplorazione interrotta; nodi visitati prima dell'errore: "
+              << visited.size() << std::endl;
+    return std::nullopt;
+  }
+
+  std::cerr << "[OPCUA browse] Esplorazione completata; nodi visitati: "
+            << visited.size() << std::endl;
+  return root;
+}
 
 }

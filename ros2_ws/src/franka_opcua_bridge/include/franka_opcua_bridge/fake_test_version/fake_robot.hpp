@@ -27,6 +27,7 @@ public:
 
   bool activateFCI() override;
   bool deactivateFCI() override;
+  std::optional<namespaceTree> showAddressSpaceNodes() override;
 
   std::unique_ptr<RobotStatus> readStatus() override;
   std::vector<double> readJointAngles() override;

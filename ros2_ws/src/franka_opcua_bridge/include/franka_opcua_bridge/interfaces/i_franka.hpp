@@ -2,9 +2,11 @@
 #define FRANKA_OPCUA_BRIDGE__INTERFACES__I_FRANKA_
 
 #include "franka_opcua_bridge/interfaces/i_robot.hpp"
+#include "franka_opcua_bridge/opcua_namespace_tree.hpp"
 
 #include <functional>
 #include <string>
+#include <optional>
 
 namespace franka_opcua_bridge
 {
@@ -39,6 +41,7 @@ public:
 
   virtual bool activateFCI() = 0;
   virtual bool deactivateFCI() = 0;
+  virtual std::optional<namespaceTree> showAddressSpaceNodes() = 0;
 
 
 };

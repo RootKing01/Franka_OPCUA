@@ -78,6 +78,10 @@ public:
 
   bool activateFCI() override {return true;}
   bool deactivateFCI() override {return true;}
+  std::optional<franka_opcua_bridge::namespaceTree> showAddressSpaceNodes() override
+  {
+    return std::nullopt;
+  }
 
   std::unique_ptr<RobotStatus> readStatus() override
   {

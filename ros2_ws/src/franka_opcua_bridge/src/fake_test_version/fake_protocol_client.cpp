@@ -115,6 +115,20 @@ bool FakeProtocolClient::writeValue(
 
 }
 
+std::optional<namespaceTree> FakeProtocolClient::exploreAddressSpace()
+{
+  if (!connected_) {
+    return std::nullopt;
+  }
+
+  namespaceTree root;
+  root.browseName = "RootFolder";
+  root.displayName = "Root";
+  root.nodeId = "ns=0;i=84";
+  root.nodekind = NodeKind::Object;
+  return root;
+}
+
 
 std::string FakeProtocolClient::pathToKey(const std::vector<std::string> & path)
 {
