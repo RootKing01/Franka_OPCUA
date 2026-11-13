@@ -7,6 +7,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 
 #include <cstdint>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -20,6 +21,7 @@ class FrankaFsmNode : public rclcpp::Node{
 public:
 
     FrankaFsmNode();
+    void runInteractiveMenu();
     
     ~FrankaFsmNode() override = default;
 
@@ -31,6 +33,8 @@ private:
     rclcpp::Subscription<franka_interfaces::msg::BridgeResult>::SharedPtr result_subscription_;
     std::uint64_t next_request_id_{1};
     std::vector<std::string> available_task_ids_;
+    std::mutex state_mutex_;
+    bool task_active_{false};
 
     enum class CommandType
     {
@@ -48,6 +52,13 @@ private:
         SaveExplicitPose
     };
 
+    struct CommandRequest
+    {
+        CommandType command;
+        std::string parameter;
+        std::optional<geometry_msgs::msg::Pose> pose;
+    };
+
     std::unordered_map<std::uint64_t, CommandType> pending_commands_;
 
     enum class FsmState
@@ -57,6 +68,7 @@ private:
         Picking,
         BlockReady,
         Moving,
+        TaskRunning,
         Completed,
         Interrupted,
         Error
@@ -82,6 +94,11 @@ private:
         CommandType command,
         const std::string & parameter = "",
         const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt);
+
+    void showMainMenu(bool task_active) const;
+    void showAvailableCommands() const;
+    void showCommandMenu(bool task_active) const;
+    std::optional<CommandRequest> readCommandRequest(bool task_active);
 
 
 
