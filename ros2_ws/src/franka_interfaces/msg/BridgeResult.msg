@@ -1,0 +1,15 @@
+uint8 STATUS_UNKNOWN=0
+uint8 STATUS_ACCEPTED=1
+uint8 STATUS_COMPLETED=2
+uint8 STATUS_REJECTED=3
+uint8 STATUS_FAILED=4
+uint8 STATUS_CANCELLED=5
+uint8 STATUS_TIMEOUT=6
+uint8 STATUS_NOT_READY=7
+uint8 STATUS_DISCONNECTED=8
+uint8 STATUS_NOT_NEEDED=9
+
+uint64 request_id
+uint8 status
+string message
+string[] task_ids

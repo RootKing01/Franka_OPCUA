@@ -108,18 +108,17 @@ void OpcuaWorker::stop()
     RCLCPP_INFO(workerLogger(), "Arresto worker richiesto");
 
     std::unique_lock<std::mutex> lock(mutex_);
-    
+
     worker_state_ = WorkerStatus::Stopping;
 
     command_manager_.shutdown();
 
     lock.unlock();
 
-    while(true)
-    {
+    while (true) {
       auto command = command_manager_.tryPop();
 
-      if(!command){
+      if (!command) {
 
         break;
       }
@@ -350,35 +349,35 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       break;
 
     case FrankaCommandType::Stop: {
-      bool stop_needed = true;
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        stop_needed = !stop_not_needed_;
-        if (!stop_needed) {
-          stop_not_needed_ = false;
-          stop_pending_ = false;
-          abort_requested_.store(false);
-        } else {
-          abort_requested_.store(false);
+        bool stop_needed = true;
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          stop_needed = !stop_not_needed_;
+          if (!stop_needed) {
+            stop_not_needed_ = false;
+            stop_pending_ = false;
+            abort_requested_.store(false);
+          } else {
+            abort_requested_.store(false);
+          }
         }
+        if (!stop_needed) {
+          result.status = FrankaCommandStatus::NotNeeded;
+          result.message = "Stop not needed: motion had already terminated";
+          result.finished_at = std::chrono::steady_clock::now();
+          return result;
+        }
+        RCLCPP_INFO(
+          workerLogger(), "Comando stop %lu: invocazione di StopTask",
+          static_cast<unsigned long>(command.command_id));
+        success = franka_->stop();
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          stop_pending_ = false;
+        }
+        message = success ? "Robot stopped" : "Failed to stop robot";
+        break;
       }
-      if (!stop_needed) {
-        result.status = FrankaCommandStatus::NotNeeded;
-        result.message = "Stop not needed: motion had already terminated";
-        result.finished_at = std::chrono::steady_clock::now();
-        return result;
-      }
-      RCLCPP_INFO(
-        workerLogger(), "Comando stop %lu: invocazione di StopTask",
-        static_cast<unsigned long>(command.command_id));
-      success = franka_->stop();
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        stop_pending_ = false;
-      }
-      message = success ? "Robot stopped" : "Failed to stop robot";
-      break;
-    }
 
     case FrankaCommandType::ExecuteNamedTask:
       success = franka_->executeNamedTask(command.parameter);
@@ -386,41 +385,41 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       break;
 
     case FrankaCommandType::MoveToNamedPose: {
-      const MotionResult motion = franka_->moveToNamedPose(
-        command.parameter,
-        [this]() {return abort_requested_.load();});
-      if (motion.outcome != MotionOutcome::Cancelled) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (stop_pending_ && abort_requested_.load()) {
-          stop_not_needed_ = true;
+        const MotionResult motion = franka_->moveToNamedPose(
+          command.parameter,
+          [this]() {return abort_requested_.load();});
+        if (motion.outcome != MotionOutcome::Cancelled) {
+          std::lock_guard<std::mutex> lock(mutex_);
+          if (stop_pending_ && abort_requested_.load()) {
+            stop_not_needed_ = true;
+          }
         }
+        result.message = motion.message;
+        switch (motion.outcome) {
+          case MotionOutcome::Completed:
+            result.status = FrankaCommandStatus::Completed;
+            break;
+          case MotionOutcome::Cancelled:
+            result.status = FrankaCommandStatus::Cancelled;
+            break;
+          case MotionOutcome::Failed:
+            result.status = FrankaCommandStatus::Failed;
+            break;
+          case MotionOutcome::Timeout:
+            result.status = FrankaCommandStatus::Timeout;
+            break;
+        }
+        result.finished_at = std::chrono::steady_clock::now();
+        if (result.status == FrankaCommandStatus::Failed ||
+          result.status == FrankaCommandStatus::Timeout)
+        {
+          RCLCPP_ERROR(
+            workerLogger(), "Comando movimento %lu terminato con stato %d: %s",
+            static_cast<unsigned long>(command.command_id),
+            static_cast<int>(result.status), result.message.c_str());
+        }
+        return result;
       }
-      result.message = motion.message;
-      switch (motion.outcome) {
-        case MotionOutcome::Completed:
-          result.status = FrankaCommandStatus::Completed;
-          break;
-        case MotionOutcome::Cancelled:
-          result.status = FrankaCommandStatus::Cancelled;
-          break;
-        case MotionOutcome::Failed:
-          result.status = FrankaCommandStatus::Failed;
-          break;
-        case MotionOutcome::Timeout:
-          result.status = FrankaCommandStatus::Timeout;
-          break;
-      }
-      result.finished_at = std::chrono::steady_clock::now();
-      if (result.status == FrankaCommandStatus::Failed ||
-        result.status == FrankaCommandStatus::Timeout)
-      {
-        RCLCPP_ERROR(
-          workerLogger(), "Comando movimento %lu terminato con stato %d: %s",
-          static_cast<unsigned long>(command.command_id),
-          static_cast<int>(result.status), result.message.c_str());
-      }
-      return result;
-    }
 
     case FrankaCommandType::SaveCurrentPose:
       success = pose_storage_ != nullptr && pose_storage_->savePose(command.parameter);
@@ -448,37 +447,37 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
       message = success ? "Switch to Execution mode completed" :
         "Failed to switch to Execution mode";
       break;
-    
-    case FrankaCommandType::ShowAddressSpaceNodes:{
-      auto rootNode = franka_->showAddressSpaceNodes();
-      
-      if (!rootNode){
-        success = false;
-        message = "Address space nodes tree not loaded, something went wrong";
 
-      }
-      else{
-        success = true;
-        message = "Addrress space correctly explored";
-        printTree(*rootNode);
-      }
-      break;
-    }
-    case FrankaCommandType::ShowTasks: {
-      if (task_control_ != nullptr) {
-        const std::vector<std::string> tasks_id = task_control_->showAvailableTasks();
+    case FrankaCommandType::ShowAddressSpaceNodes: {
+        auto rootNode = franka_->showAddressSpaceNodes();
 
-        RCLCPP_INFO(workerLogger(), "Task disponibili: %zu", tasks_id.size());
+        if (!rootNode) {
+          success = false;
+          message = "Address space nodes tree not loaded, something went wrong";
 
-        for (const auto & task_id : tasks_id) {
-          RCLCPP_INFO(workerLogger(), "ID: %s", task_id.c_str());
+        } else {
+          success = true;
+          message = "Addrress space correctly explored";
+          printTree(*rootNode);
         }
-
-        success = true;
+        break;
       }
-      message = success ? "Task list retrieved" : "Task control is unavailable";
-      break;
-    }
+    case FrankaCommandType::ShowTasks: {
+        if (task_control_ != nullptr) {
+          const std::vector<std::string> tasks_id = task_control_->showAvailableTasks();
+
+          RCLCPP_INFO(workerLogger(), "Task disponibili: %zu", tasks_id.size());
+
+          for (const auto & task_id : tasks_id) {
+            RCLCPP_INFO(workerLogger(), "ID: %s", task_id.c_str());
+          }
+
+          result.task_ids = tasks_id;
+          success = true;
+        }
+        message = success ? "Task list retrieved" : "Task control is unavailable";
+        break;
+      }
 
     default:
       result.status = FrankaCommandStatus::Rejected;
@@ -548,7 +547,6 @@ std::optional<FrankaCommandResult> OpcuaWorker::waitAndPopResult()
 }
 
 
-
 WorkerStatus OpcuaWorker::status() const
 {
 
@@ -561,16 +559,15 @@ WorkerStatus OpcuaWorker::status() const
 
 }
 
-void OpcuaWorker::printTree(const namespaceTree &node, std::size_t depth)
+void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)
 {
   std::cout << std::string(depth * 2, ' ')
             << node.browseName << " (" << node.displayName << ")\n";
 
-  for (const namespaceTree &child : node.children) {
+  for (const namespaceTree & child : node.children) {
     printTree(child, depth + 1);
   }
 }
-
 
 
 }

@@ -7,7 +7,7 @@
 namespace franka_opcua_bridge
 {
 
-  enum class NodeKind
+enum class NodeKind
 {
   Unspecified,
   Object,
@@ -33,8 +33,6 @@ struct namespaceTree
   std::vector<namespaceTree> children;
 
 };
-
-
 
 
 }

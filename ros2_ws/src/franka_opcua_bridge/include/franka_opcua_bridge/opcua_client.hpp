@@ -55,6 +55,7 @@ public:
     const Value & out_value) override;
 
   NodeKind toNodeKind(UA_NodeClass nodeClass);
+
 private:
   std::string endpoint_;
   std::string user_;

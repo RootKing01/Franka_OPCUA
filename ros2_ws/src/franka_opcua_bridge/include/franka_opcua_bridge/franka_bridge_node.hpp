@@ -2,7 +2,8 @@
 #define FRANKA_OPCUA_BRIDGE__FRANKA_BRIDGE_NODE_HPP_
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
+#include "franka_interfaces/msg/bridge_command.hpp"
+#include "franka_interfaces/msg/bridge_result.hpp"
 
 #include <memory>
 #include <string>
@@ -20,20 +21,18 @@ public:
   ~FrankaBridgeNode() override;
 
 private:
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr command_subscription_;
+  rclcpp::Subscription<franka_interfaces::msg::BridgeCommand>::SharedPtr command_subscription_;
 
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr result_publisher_;
+  rclcpp::Publisher<franka_interfaces::msg::BridgeResult>::SharedPtr result_publisher_;
 
   rclcpp::TimerBase::SharedPtr result_timer_;
 
   std::unique_ptr<OpcuaWorker> worker_;
 
-  std::atomic<std::uint64_t> next_command_id_{1};
-
   void publishPendingResults();
 
   void commandCallback(
-    const std_msgs::msg::String::SharedPtr msg);
+    const franka_interfaces::msg::BridgeCommand::SharedPtr msg);
 };
 
 }  // namespace franka_opcua_bridge

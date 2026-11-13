@@ -204,11 +204,11 @@ std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
       robotStatus->active_task_id = status.active_task_id;
 
       std::cerr << "[STATUS] has_error=" << robotStatus->has_error
-            << ", is_running=" << robotStatus->is_running
-            << ", active_task_name='" << robotStatus->active_task_name
-            << "', active_task_id='" << robotStatus->active_task_id
-            << "', error_message='" << robotStatus->error_message
-            << "'" << std::endl;
+                << ", is_running=" << robotStatus->is_running
+                << ", active_task_name='" << robotStatus->active_task_name
+                << "', active_task_id='" << robotStatus->active_task_id
+                << "', error_message='" << robotStatus->error_message
+                << "'" << std::endl;
 
       return robotStatus;
 
@@ -553,7 +553,8 @@ std::optional<geometry_msgs::msg::Pose> FrankaRobot::tryReadCartesianPose()
 }
 
 
-bool FrankaRobot::switchToExecution(){
+bool FrankaRobot::switchToExecution()
+{
 
   CallResult result = client_->callMethod(kExecutionControlPath, "SwitchToExecution", {});
 
@@ -561,7 +562,8 @@ bool FrankaRobot::switchToExecution(){
 }
 
 
-std::vector<std::string> FrankaRobot::showAvailableTasks(){
+std::vector<std::string> FrankaRobot::showAvailableTasks()
+{
 
   std::vector<std::string> path = kExecutionControlPath;
   std::string method = "Tasks";
@@ -582,7 +584,8 @@ std::vector<std::string> FrankaRobot::showAvailableTasks(){
 }
 
 
-std::optional<namespaceTree> FrankaRobot::showAddressSpaceNodes(){
+std::optional<namespaceTree> FrankaRobot::showAddressSpaceNodes()
+{
 
   return client_->exploreAddressSpace();
 

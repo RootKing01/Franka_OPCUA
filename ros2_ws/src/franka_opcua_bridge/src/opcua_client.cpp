@@ -488,19 +488,22 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
 
   if (variant.data != nullptr && UA_Variant_isScalar(&variant)) {
     if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYINTPAIR]) {
-      value = Value(convertKeyIntPair(
+      value = Value(
+        convertKeyIntPair(
           *static_cast<const UA_KeyIntPair *>(variant.data)));
       return true;
     }
 
     if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_KEYPOSEPAIR]) {
-      value = Value(convertKeyPosePair(
+      value = Value(
+        convertKeyPosePair(
           *static_cast<const UA_KeyPosePair *>(variant.data)));
       return true;
     }
 
     if (variant.type == &UA_OPC_UA_SERVICE_TYPES[UA_OPC_UA_SERVICE_TYPES_EXECUTIONSTATUS]) {
-      value = Value(convertExecutionStatus(
+      value = Value(
+        convertExecutionStatus(
           *static_cast<const UA_ExecutionStatus *>(variant.data)));
       return true;
     }
@@ -558,14 +561,15 @@ bool OpcuaClient::UaVariantToValue(const UA_Variant & variant, Value & value)
                 << encoding_id.namespaceIndex
                 << ", numeric="
                 << (encoding_id.identifierType == UA_NODEIDTYPE_NUMERIC ?
-          encoding_id.identifier.numeric : 0)
+      encoding_id.identifier.numeric : 0)
                 << ", bodyLength=" << body.length << std::endl;
 
       const UA_DataType * type = nullptr;
       for (size_t i = 0; i < UA_OPC_UA_SERVICE_TYPES_COUNT; ++i) {
         if (UA_NodeId_equal(
             &encoding_id,
-            &UA_OPC_UA_SERVICE_TYPES[i].binaryEncodingId)) {
+            &UA_OPC_UA_SERVICE_TYPES[i].binaryEncodingId))
+        {
           type = &UA_OPC_UA_SERVICE_TYPES[i];
           break;
         }
@@ -837,7 +841,6 @@ NodeKind OpcuaClient::toNodeKind(UA_NodeClass nodeClass)
       return NodeKind::Unknown;
   }
 }
-
 
 
 std::optional<namespaceTree> OpcuaClient::exploreAddressSpace()

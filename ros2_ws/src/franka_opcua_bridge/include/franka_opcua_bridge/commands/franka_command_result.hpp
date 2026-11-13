@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace franka_opcua_bridge
 {
@@ -31,6 +32,7 @@ struct FrankaCommandResult
   std::uint64_t command_id;
   FrankaCommandStatus status;
   std::string message;
+  std::vector<std::string> task_ids;
   std::chrono::steady_clock::time_point finished_at;
 
 };

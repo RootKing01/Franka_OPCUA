@@ -21,78 +21,29 @@ namespace franka_opcua_bridge
 namespace
 {
 
-const char * commandStatusName(FrankaCommandStatus status)
+std::uint8_t commandStatusValue(FrankaCommandStatus status)
 {
   switch (status) {
     case FrankaCommandStatus::Accepted:
-      return "Accepted";
+      return franka_interfaces::msg::BridgeResult::STATUS_ACCEPTED;
     case FrankaCommandStatus::Completed:
-      return "Completed";
+      return franka_interfaces::msg::BridgeResult::STATUS_COMPLETED;
     case FrankaCommandStatus::Rejected:
-      return "Rejected";
+      return franka_interfaces::msg::BridgeResult::STATUS_REJECTED;
     case FrankaCommandStatus::Failed:
-      return "Failed";
+      return franka_interfaces::msg::BridgeResult::STATUS_FAILED;
     case FrankaCommandStatus::Cancelled:
-      return "Cancelled";
+      return franka_interfaces::msg::BridgeResult::STATUS_CANCELLED;
     case FrankaCommandStatus::NotNeeded:
-      return "NotNeeded";
+      return franka_interfaces::msg::BridgeResult::STATUS_NOT_NEEDED;
     case FrankaCommandStatus::Timeout:
-      return "Timeout";
+      return franka_interfaces::msg::BridgeResult::STATUS_TIMEOUT;
     case FrankaCommandStatus::NotReady:
-      return "NotReady";
+      return franka_interfaces::msg::BridgeResult::STATUS_NOT_READY;
     case FrankaCommandStatus::Disconnected:
-      return "Disconnected";
+      return franka_interfaces::msg::BridgeResult::STATUS_DISCONNECTED;
   }
-  return "Unknown";
-}
-
-bool parseExplicitPoseCommand(
-  const std::string & command,
-  std::string & pose_id,
-  geometry_msgs::msg::Pose & pose)
-{
-  constexpr const char * kPrefix = "save_pose:";
-  const std::string payload = command.substr(std::string(kPrefix).size());
-
-  std::stringstream stream(payload);
-  std::vector<std::string> fields;
-  std::string field;
-  while (std::getline(stream, field, ':')) {
-    fields.push_back(field);
-  }
-
-  if (fields.size() != 8 || fields[0].empty()) {
-    return false;
-  }
-
-  try {
-    double values[7];
-    for (std::size_t index = 0; index < 7; ++index) {
-      std::size_t parsed_characters = 0;
-      values[index] = std::stod(fields[index + 1], &parsed_characters);
-      if (parsed_characters != fields[index + 1].size()) {
-        return false;
-      }
-    }
-
-    for (const double value : values) {
-      if (!std::isfinite(value)) {
-        return false;
-      }
-    }
-
-    pose_id = fields[0];
-    pose.position.x = values[0];
-    pose.position.y = values[1];
-    pose.position.z = values[2];
-    pose.orientation.x = values[3];
-    pose.orientation.y = values[4];
-    pose.orientation.z = values[5];
-    pose.orientation.w = values[6];
-    return true;
-  } catch (const std::exception &) {
-    return false;
-  }
+  return franka_interfaces::msg::BridgeResult::STATUS_UNKNOWN;
 }
 
 }  // namespace
@@ -129,7 +80,7 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
   const std::string topic_name = "/franka_" + robot_id + "/command";
 
   command_subscription_ =
-    this->create_subscription<std_msgs::msg::String>(
+    this->create_subscription<franka_interfaces::msg::BridgeCommand>(
     topic_name,
     10,
     std::bind(
@@ -145,7 +96,8 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
   // Topic dei risultati
   const std::string result_topic = "/franka_" + robot_id + "/command_result";
 
-  result_publisher_ = this->create_publisher<std_msgs::msg::String>(result_topic, 10);
+  result_publisher_ =
+    this->create_publisher<franka_interfaces::msg::BridgeResult>(result_topic, 10);
 
   RCLCPP_INFO(
     this->get_logger(),
@@ -163,147 +115,125 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 void FrankaBridgeNode::publishPendingResults()
 {
   while (auto result = worker_->tryGetResult()) {
-    std_msgs::msg::String message_result;
-    message_result.data =
-      "command_id=" + std::to_string(result->command_id) +
-      ";status=" + commandStatusName(result->status) +
-      ";message=" + result->message;
+    franka_interfaces::msg::BridgeResult message_result;
+    message_result.request_id = result->command_id;
+    message_result.status = commandStatusValue(result->status);
+    message_result.message = result->message;
+    message_result.task_ids = result->task_ids;
     result_publisher_->publish(message_result);
+    RCLCPP_INFO(
+      get_logger(),
+      "Risultato pubblicato: request_id=%lu status=%u task_count=%zu message='%s'",
+      static_cast<unsigned long>(message_result.request_id),
+      static_cast<unsigned int>(message_result.status),
+      message_result.task_ids.size(),
+      message_result.message.c_str());
   }
 }
 
 
-
-void FrankaBridgeNode::commandCallback(const std_msgs::msg::String::SharedPtr msg)
+void FrankaBridgeNode::commandCallback(
+  const franka_interfaces::msg::BridgeCommand::SharedPtr msg)
 {
-  auto enqueueCommand = [this](
-    FrankaCommandType type,
-    const std::string & parameter = "",
-    const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt) {
+  RCLCPP_DEBUG(
+    get_logger(),
+    "Comando ricevuto: request_id=%lu command=%u parameter='%s'",
+    static_cast<unsigned long>(msg->request_id),
+    static_cast<unsigned int>(msg->command),
+    msg->parameter.c_str());
 
-      FrankaRobotCommand robot_command;
-      robot_command.command_id = next_command_id_.fetch_add(1);
-      robot_command.type = type;
-      robot_command.parameter = parameter;
-      robot_command.pose = pose;
-      robot_command.created_at = std::chrono::steady_clock::now();
+  FrankaCommandType command_type;
+  bool priority = false;
+  std::string parameter;
 
-      const auto command_id = robot_command.command_id;
-
-      if (worker_->enqueueCommand(std::move(robot_command))) {
-        RCLCPP_INFO(
-          this->get_logger(),
-          "Comando %lu accodato",
-          command_id);
-      } else {
-        RCLCPP_ERROR(
-          this->get_logger(),
-          "Comando %lu rifiutato dal worker",
-          command_id);
+  switch (msg->command) {
+    case franka_interfaces::msg::BridgeCommand::COMMAND_OPEN_BRAKES:
+      command_type = FrankaCommandType::OpenBrakes;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_CLOSE_BRAKES:
+      command_type = FrankaCommandType::CloseBrakes;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_ACTIVATE_FCI:
+      command_type = FrankaCommandType::ActivateFci;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_DEACTIVATE_FCI:
+      command_type = FrankaCommandType::DeactivateFci;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_SWITCH_TO_EXEC:
+      command_type = FrankaCommandType::SwitchToExec;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_SHOW_ADDRESS_SPACE_NODES:
+      command_type = FrankaCommandType::ShowAddressSpaceNodes;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_SHOW_TASKS:
+      command_type = FrankaCommandType::ShowTasks;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_TASK:
+      if (msg->parameter.empty()) {
+        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della task mancante",
+          static_cast<unsigned long>(msg->request_id));
+        return;
       }
-    };
-
-  auto enqueuePriority = [this](FrankaCommandType type, const std::string & parameter = "") {
-
-      FrankaRobotCommand robot_command;
-      robot_command.command_id = next_command_id_.fetch_add(1);
-      robot_command.type = type;
-      robot_command.parameter = parameter;
-      robot_command.created_at = std::chrono::steady_clock::now();
-
-      const auto command_id = robot_command.command_id;
-
-      if (worker_->enqueuePriority(std::move(robot_command))) {
-        RCLCPP_INFO(
-          this->get_logger(),
-          "Comando %lu accodato",
-          command_id);
-      } else {
-        RCLCPP_ERROR(
-          this->get_logger(),
-          "Comando %lu rifiutato dal worker",
-          command_id);
+      command_type = FrankaCommandType::ExecuteNamedTask;
+      parameter = msg->parameter;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_STOP:
+      command_type = FrankaCommandType::Stop;
+      priority = true;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE:
+      if (msg->parameter.empty()) {
+        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa mancante",
+          static_cast<unsigned long>(msg->request_id));
+        return;
       }
-    };
-
-
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Comando ricevuto: '%s'",
-    msg->data.c_str());
-
-  const std::string command = msg->data;
-
-  if (command == "open_brakes") {
-
-    enqueueCommand(FrankaCommandType::OpenBrakes);
-
-  } else if (command == "close_brakes") {
-
-    enqueueCommand(FrankaCommandType::CloseBrakes);
-
-  } else if (command == "activate_FCI") {
-
-    enqueueCommand(FrankaCommandType::ActivateFci);
-
-  } else if (command == "deactivate_FCI") {
-
-    enqueueCommand(FrankaCommandType::DeactivateFci);
-  
-  }else if(command == "show_tasks"){
-
-    enqueueCommand(FrankaCommandType::ShowTasks);
-
-  }else if(command == "switch_exec"){
-
-    enqueueCommand(FrankaCommandType::SwitchToExec);
-  
-  }else if(command == "show_address_space_nodes"){
-
-    enqueueCommand(FrankaCommandType::ShowAddressSpaceNodes);
-
-  } else if (command == "stop") {
-
-    enqueuePriority(FrankaCommandType::Stop);
-
-  } else if (command.rfind("move_to_pose:", 0) == 0) {
-
-    const std::string pose_id = command.substr(std::string("move_to_pose:").size());
-
-    if (pose_id.empty()) {
-      RCLCPP_WARN(
-        this->get_logger(),
-        "Nome della posa mancante");
-    } else {
-      enqueueCommand(FrankaCommandType::MoveToNamedPose, pose_id);
-    }
-
-  } else if (command.rfind("save_pose:", 0) == 0) {
-
-    const std::string payload = command.substr(std::string("save_pose:").size());
-
-    if (payload.empty()) {
-      RCLCPP_WARN(this->get_logger(), "Nome della posa da salvare mancante");
-    } else if (payload.find(':') == std::string::npos) {
-      enqueueCommand(FrankaCommandType::SaveCurrentPose, payload);
-    } else {
-      std::string pose_id;
-      geometry_msgs::msg::Pose pose;
-      if (!parseExplicitPoseCommand(command, pose_id, pose)) {
-        RCLCPP_WARN(
-          this->get_logger(),
-          "Formato posa non valido. Atteso save_pose:id:x:y:z:qx:qy:qz:qw");
-      } else {
-        enqueueCommand(FrankaCommandType::SaveExplicitPose, pose_id, pose);
+      command_type = FrankaCommandType::MoveToNamedPose;
+      parameter = msg->parameter;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE:
+      if (msg->parameter.empty()) {
+        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa da salvare mancante",
+          static_cast<unsigned long>(msg->request_id));
+        return;
       }
-    }
+      command_type = FrankaCommandType::SaveCurrentPose;
+      parameter = msg->parameter;
+      break;
+    case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE:
+      if (msg->parameter.empty()) {
+        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa da salvare mancante",
+          static_cast<unsigned long>(msg->request_id));
+        return;
+      }
+      command_type = FrankaCommandType::SaveExplicitPose;
+      parameter = msg->parameter;
+      break;
+    default:
+      RCLCPP_WARN(get_logger(), "request_id=%lu: comando ROS non riconosciuto",
+        static_cast<unsigned long>(msg->request_id));
+      return;
+  }
 
+  FrankaRobotCommand robot_command;
+  robot_command.command_id = msg->request_id;
+  robot_command.type = command_type;
+  robot_command.parameter = parameter;
+  if (msg->command == franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE) {
+    robot_command.pose = msg->pose;
+  }
+  robot_command.created_at = std::chrono::steady_clock::now();
+
+  const auto request_id = msg->request_id;
+  const bool enqueued = priority ?
+    worker_->enqueuePriority(std::move(robot_command)) :
+    worker_->enqueueCommand(std::move(robot_command));
+
+  if (enqueued) {
+    RCLCPP_INFO(get_logger(), "Comando accodato con request_id=%lu",
+      static_cast<unsigned long>(request_id));
   } else {
-
-    RCLCPP_WARN(
-      this->get_logger(),
-      "Comando non riconosciuto: '%s'",
-      command.c_str());
+    RCLCPP_ERROR(get_logger(), "Comando rifiutato dal worker, request_id=%lu",
+      static_cast<unsigned long>(request_id));
   }
 }
 

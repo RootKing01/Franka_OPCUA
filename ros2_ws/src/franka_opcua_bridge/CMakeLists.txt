@@ -6,10 +6,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(franka_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -23,7 +23,7 @@ add_executable(franka_bridge_node
   src/franka_command_manager.cpp
   src/opcua_worker.cpp)
 
-ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
+ament_target_dependencies(franka_bridge_node franka_interfaces rclcpp geometry_msgs sensor_msgs)
 
 
 find_package(open62541 REQUIRED)
@@ -39,7 +39,7 @@ target_sources(franka_bridge_node PRIVATE
   ${PROJECT_BINARY_DIR}/src_generated/open62541/opc_ua_service_types_generated.c
 )
 
-ament_target_dependencies(franka_bridge_node rclcpp geometry_msgs sensor_msgs std_msgs)
+ament_target_dependencies(franka_bridge_node franka_interfaces rclcpp geometry_msgs sensor_msgs)
 target_link_libraries(franka_bridge_node
   Eigen3::Eigen
   Threads::Threads
