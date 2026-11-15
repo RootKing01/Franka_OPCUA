@@ -99,6 +99,7 @@ private:
     void showAvailableCommands() const;
     void showCommandMenu(bool task_active) const;
     std::optional<CommandRequest> readCommandRequest(bool task_active);
+    bool checkFullQueue();
 
 
 

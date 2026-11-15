@@ -154,8 +154,35 @@ void FrankaFsmNode::runInteractiveMenu()
             }
             continue;
         }
-        sendCommand(request->command, request->parameter, request->pose);
+        
+        switch(request->command){
+            case CommandType::Stop:
+                sendCommand(request->command, request->parameter, request->pose);
+                continue;
+            default:
+                if (checkFullQueue()){
+                    std::cout << "Bridge's command queue is full. Wait a moment to send another command.\n ";
+                    continue;
+                }
+
+                sendCommand(request->command, request->parameter, request->pose);
+                continue;
+        }
+       
+        
     }
+}
+
+bool FrankaFsmNode::checkFullQueue(){
+
+    bool full = false;
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    
+    if(pending_commands_.size() >= 4){full = true;}
+    
+    return full;
+
+
 }
 
 
@@ -165,8 +192,10 @@ void FrankaFsmNode::showMainMenu(bool task_active) const
               << "1. Mostra comandi\n"
               << "2. Invia comando\n"
               << "3. Termina\n";
+    
+   
     if (task_active) {
-        std::cout << "Task attiva: invia STOP prima di usare altri comandi o uscire.\n";
+        std::cout << "Task attiva: invia STOP per troncare il task, invia comandi successivi (massimo 5)  o uscire.\n";
     }
     std::cout << "> " << std::flush;
 }
@@ -192,10 +221,7 @@ void FrankaFsmNode::showAvailableCommands() const
 
 void FrankaFsmNode::showCommandMenu(bool task_active) const
 {
-    if (task_active) {
-        std::cout << "1. STOP\n0. Indietro\n> " << std::flush;
-        return;
-    }
+    
 
     std::cout << " 1. Mostra task OPC UA\n"
               << " 2. Avvia task OPC UA\n"
@@ -222,14 +248,6 @@ std::optional<FrankaFsmNode::CommandRequest> FrankaFsmNode::readCommandRequest(
     }
 
     if (choice == "0") {
-        return std::nullopt;
-    }
-
-    if (task_active) {
-        if (choice == "1") {
-            return CommandRequest{CommandType::Stop, "", std::nullopt};
-        }
-        std::cout << "Durante una task e' consentito solo STOP.\n";
         return std::nullopt;
     }
 
@@ -318,13 +336,6 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
     const std::string & parameter,
     const std::optional<geometry_msgs::msg::Pose> & pose)
 {
-    {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        if (task_active_ && command != CommandType::Stop) {
-            RCLCPP_WARN(get_logger(), "Task attiva: comando ignorato, invia prima STOP");
-            return std::nullopt;
-        }
-    }
 
     const bool requires_parameter =
         command == CommandType::ExecuteTask ||
