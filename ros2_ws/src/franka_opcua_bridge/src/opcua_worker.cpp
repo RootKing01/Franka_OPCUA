@@ -148,24 +148,27 @@ void OpcuaWorker::stop()
 
 bool OpcuaWorker::enqueueCommand(FrankaRobotCommand command)
 {
-
-  std::unique_lock<std::mutex> lock(mutex_);
-
+  const auto command_id = command.command_id;
+  std::lock_guard<std::mutex> lock(mutex_);
   if (worker_state_ != WorkerStatus::Ready) {
-
     RCLCPP_WARN(
       workerLogger(), "Comando %lu rifiutato: worker non pronto",
-      static_cast<unsigned long>(command.command_id));
-    lock.unlock();
+      static_cast<unsigned long>(command_id));
     return false;
   }
 
-  lock.unlock();
-  const bool accepted = command_manager_.enqueue(command);
+  if (stop_pending_) {
+    RCLCPP_WARN(
+      workerLogger(), "Comando %lu rifiutato: stop in corso",
+      static_cast<unsigned long>(command_id));
+    return false;
+  }
+
+  const bool accepted = command_manager_.enqueue(std::move(command));
   if (!accepted) {
     RCLCPP_WARN(
       workerLogger(), "Comando %lu rifiutato: coda piena o in shutdown",
-      static_cast<unsigned long>(command.command_id));
+      static_cast<unsigned long>(command_id));
   }
   return accepted;
 
@@ -173,32 +176,48 @@ bool OpcuaWorker::enqueueCommand(FrankaRobotCommand command)
 
 bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
 {
-
   const auto command_id = command.command_id;
   const bool is_stop = command.type == FrankaCommandType::Stop;
+  std::vector<FrankaRobotCommand> cancelled_commands;
+  bool accepted = false;
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (worker_state_ != WorkerStatus::Ready) {
+      RCLCPP_WARN(
+        workerLogger(), "Comando prioritario %lu rifiutato: worker non pronto",
+        static_cast<unsigned long>(command_id));
+      return false;
+    }
 
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (worker_state_ != WorkerStatus::Ready) {
-    RCLCPP_WARN(
-      workerLogger(), "Comando prioritario %lu rifiutato: worker non pronto",
-      static_cast<unsigned long>(command_id));
-    return false;
+    if (is_stop && stop_pending_) {
+      RCLCPP_WARN(
+        workerLogger(), "Comando stop %lu rifiutato: uno stop e' gia' pendente",
+        static_cast<unsigned long>(command_id));
+      return false;
+    }
+
+    if (is_stop) {
+      auto cancelled = command_manager_.enqueueStop(std::move(command));
+      accepted = cancelled.has_value();
+      if (accepted) {
+        cancelled_commands = std::move(*cancelled);
+        stop_pending_ = true;
+        stop_not_needed_ = false;
+        abort_requested_.store(true);
+      }
+    } else {
+      accepted = command_manager_.enqueuePriority(std::move(command));
+    }
   }
 
-  if (is_stop && stop_pending_) {
-    RCLCPP_WARN(
-      workerLogger(), "Comando stop %lu rifiutato: uno stop e' gia' pendente",
-      static_cast<unsigned long>(command_id));
-    return false;
+  for (const auto & cancelled_command : cancelled_commands) {
+    FrankaCommandResult result;
+    result.command_id = cancelled_command.command_id;
+    result.status = FrankaCommandStatus::Cancelled;
+    result.message = "Comando annullato da STOP";
+    result.finished_at = std::chrono::steady_clock::now();
+    pushResult(std::move(result));
   }
-
-  const bool accepted = command_manager_.enqueuePriority(std::move(command));
-  if (accepted && is_stop) {
-    stop_pending_ = true;
-    stop_not_needed_ = false;
-    abort_requested_.store(true);
-  }
-  lock.unlock();
 
   if (!accepted) {
     RCLCPP_WARN(

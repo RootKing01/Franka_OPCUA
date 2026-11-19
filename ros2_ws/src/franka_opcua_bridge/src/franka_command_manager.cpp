@@ -102,6 +102,31 @@ std::optional<FrankaRobotCommand> FrankaCommandManager::tryPop()
 
 }
 
+std::optional<std::vector<FrankaRobotCommand>> FrankaCommandManager::enqueueStop(
+  FrankaRobotCommand stop_command)
+{
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (shutdown_requested_) {return std::nullopt;}
+
+  if (priority_queue.size() >= capacity_) {return std::nullopt;}
+
+  std::vector<FrankaRobotCommand> cancelled;
+  while (!command_queue.empty()) {
+
+    cancelled.push_back(std::move(command_queue.front()));
+    command_queue.pop();
+  }
+
+  priority_queue.push(std::move(stop_command));
+  condition_.notify_one();
+
+  return cancelled;
+
+}
+
+
 void FrankaCommandManager::shutdown()
 {
 

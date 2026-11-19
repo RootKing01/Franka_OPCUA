@@ -170,7 +170,8 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_TASK:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della task mancante",
+        RCLCPP_WARN(
+          get_logger(), "request_id=%lu: ID della task mancante",
           static_cast<unsigned long>(msg->request_id));
         return;
       }
@@ -183,7 +184,8 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa mancante",
+        RCLCPP_WARN(
+          get_logger(), "request_id=%lu: ID della posa mancante",
           static_cast<unsigned long>(msg->request_id));
         return;
       }
@@ -192,7 +194,8 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa da salvare mancante",
+        RCLCPP_WARN(
+          get_logger(), "request_id=%lu: ID della posa da salvare mancante",
           static_cast<unsigned long>(msg->request_id));
         return;
       }
@@ -201,7 +204,8 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(get_logger(), "request_id=%lu: ID della posa da salvare mancante",
+        RCLCPP_WARN(
+          get_logger(), "request_id=%lu: ID della posa da salvare mancante",
           static_cast<unsigned long>(msg->request_id));
         return;
       }
@@ -209,7 +213,8 @@ void FrankaBridgeNode::commandCallback(
       parameter = msg->parameter;
       break;
     default:
-      RCLCPP_WARN(get_logger(), "request_id=%lu: comando ROS non riconosciuto",
+      RCLCPP_WARN(
+        get_logger(), "request_id=%lu: comando ROS non riconosciuto",
         static_cast<unsigned long>(msg->request_id));
       return;
   }
@@ -229,10 +234,12 @@ void FrankaBridgeNode::commandCallback(
     worker_->enqueueCommand(std::move(robot_command));
 
   if (enqueued) {
-    RCLCPP_INFO(get_logger(), "Comando accodato con request_id=%lu",
+    RCLCPP_INFO(
+      get_logger(), "Comando accodato con request_id=%lu",
       static_cast<unsigned long>(request_id));
   } else {
-    RCLCPP_ERROR(get_logger(), "Comando rifiutato dal worker, request_id=%lu",
+    RCLCPP_ERROR(
+      get_logger(), "Comando rifiutato dal worker, request_id=%lu",
       static_cast<unsigned long>(request_id));
   }
 }

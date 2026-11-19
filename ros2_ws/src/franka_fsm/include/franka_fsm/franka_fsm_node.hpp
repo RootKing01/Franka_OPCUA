@@ -14,93 +14,90 @@
 #include <vector>
 
 
-namespace franka_fsm{
+namespace franka_fsm
+{
 
-class FrankaFsmNode : public rclcpp::Node{
+class FrankaFsmNode : public rclcpp::Node
+{
 
 public:
+  FrankaFsmNode();
+  void runInteractiveMenu();
 
-    FrankaFsmNode();
-    void runInteractiveMenu();
-    
-    ~FrankaFsmNode() override = default;
-
-
+  ~FrankaFsmNode() override = default;
 
 private:
+  rclcpp::Publisher<franka_interfaces::msg::BridgeCommand>::SharedPtr command_publisher_;
+  rclcpp::Subscription<franka_interfaces::msg::BridgeResult>::SharedPtr result_subscription_;
+  std::uint64_t next_request_id_{1};
+  std::vector<std::string> available_task_ids_;
+  std::mutex state_mutex_;
+  bool task_active_{false};
 
-    rclcpp::Publisher<franka_interfaces::msg::BridgeCommand>::SharedPtr command_publisher_;
-    rclcpp::Subscription<franka_interfaces::msg::BridgeResult>::SharedPtr result_subscription_;
-    std::uint64_t next_request_id_{1};
-    std::vector<std::string> available_task_ids_;
-    std::mutex state_mutex_;
-    bool task_active_{false};
+  enum class CommandType
+  {
+    ShowTasks,
+    ExecuteTask,
+    Stop,
+    OpenBrakes,
+    CloseBrakes,
+    ActivateFci,
+    DeactivateFci,
+    SwitchToExec,
+    ShowAddressSpaceNodes,
+    MoveToNamedPose,
+    SaveCurrentPose,
+    SaveExplicitPose
+  };
 
-    enum class CommandType
-    {
-        ShowTasks,
-        ExecuteTask,
-        Stop,
-        OpenBrakes,
-        CloseBrakes,
-        ActivateFci,
-        DeactivateFci,
-        SwitchToExec,
-        ShowAddressSpaceNodes,
-        MoveToNamedPose,
-        SaveCurrentPose,
-        SaveExplicitPose
-    };
+  struct CommandRequest
+  {
+    CommandType command;
+    std::string parameter;
+    std::optional<geometry_msgs::msg::Pose> pose;
+  };
 
-    struct CommandRequest
-    {
-        CommandType command;
-        std::string parameter;
-        std::optional<geometry_msgs::msg::Pose> pose;
-    };
+  std::unordered_map<std::uint64_t, CommandType> pending_commands_;
 
-    std::unordered_map<std::uint64_t, CommandType> pending_commands_;
+  enum class FsmState
+  {
+    Idle,
+    WaitingForResult,
+    Picking,
+    BlockReady,
+    Moving,
+    TaskRunning,
+    Completed,
+    Interrupted,
+    Error
+  };
 
-    enum class FsmState
-    {
-        Idle,
-        WaitingForResult,
-        Picking,
-        BlockReady,
-        Moving,
-        TaskRunning,
-        Completed,
-        Interrupted,
-        Error
-    };
+  enum class BridgeStatus
+  {
+    Unknown,
+    Accepted,
+    Completed,
+    Rejected,
+    Failed,
+    Cancelled,
+    NotNeeded,
+    Timeout,
+    NotReady,
+    Disconnected
+  };
 
-    enum class BridgeStatus
-    {
-        Unknown, 
-        Accepted,
-        Completed,
-        Rejected,
-        Failed,
-        Cancelled,
-        NotNeeded,
-        Timeout,
-        NotReady,
-        Disconnected
-    };
+  FsmState state_{FsmState::Idle};
 
-    FsmState state_{FsmState::Idle};
+  std::optional<std::uint64_t> sendCommand(
+    CommandType command,
+    const std::string & parameter = "",
+    const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt);
 
-    std::optional<std::uint64_t> sendCommand(
-        CommandType command,
-        const std::string & parameter = "",
-        const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt);
-
-    void showMainMenu(bool task_active) const;
-    void showAvailableCommands() const;
-    void showCommandMenu(bool task_active) const;
-    std::optional<CommandRequest> readCommandRequest(bool task_active);
-    bool checkFullQueue();
-
+  void showMainMenu(bool task_active) const;
+  void showAvailableCommands() const;
+  void showCommandMenu(bool task_active) const;
+  std::optional<CommandRequest> readCommandRequest(bool task_active);
+  bool checkFullQueue();
 
 
 };

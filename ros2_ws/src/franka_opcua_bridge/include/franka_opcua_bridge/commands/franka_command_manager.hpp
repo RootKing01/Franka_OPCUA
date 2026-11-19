@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <condition_variable>
 #include <optional>
+#include <vector>
 
 namespace franka_opcua_bridge
 {
@@ -31,6 +32,7 @@ public:
 
   bool empty() const;
   bool priorityEmpty() const;
+  std::optional<std::vector<FrankaRobotCommand>> enqueueStop(FrankaRobotCommand stop_command);
 
 private:
   std::queue<FrankaRobotCommand> command_queue;

@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 #include "franka_opcua_bridge/opcua_worker.hpp"
 
@@ -47,6 +48,10 @@ public:
   bool areBrakesOpen() override {return false;}
   bool stop() override
   {
+    std::unique_lock<std::mutex> lock(mutex_);
+    stop_entered_ = true;
+    condition_.notify_all();
+    condition_.wait(lock, [this]() {return !hold_stop_ || stop_released_;});
     stop_call_count_.fetch_add(1);
     return true;
   }
@@ -100,18 +105,56 @@ public:
       lock, std::chrono::milliseconds(500), [this]() {return move_entered_;});
   }
 
+  bool waitUntilStopEntered()
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return condition_.wait_for(
+      lock, std::chrono::milliseconds(500), [this]() {return stop_entered_;});
+  }
+
   bool moveWasInterrupted() const {return move_interrupted_;}
   int stopCallCount() const {return stop_call_count_;}
   void setCollisionAfterAbort(bool value) {collision_after_abort_.store(value);}
+  void holdStopUntilReleased()
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    hold_stop_ = true;
+  }
+  void releaseStop()
+  {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      stop_released_ = true;
+    }
+    condition_.notify_all();
+  }
 
 private:
   bool connected_ = false;
   mutable std::mutex mutex_;
   std::condition_variable condition_;
   bool move_entered_ = false;
+  bool stop_entered_ = false;
+  bool hold_stop_ = false;
+  bool stop_released_ = false;
   std::atomic_bool move_interrupted_{false};
   std::atomic_bool collision_after_abort_{false};
   std::atomic_int stop_call_count_{0};
+};
+
+class StopReleaseGuard
+{
+public:
+  explicit StopReleaseGuard(BlockingRobot * robot)
+  : robot_(robot) {}
+
+  ~StopReleaseGuard()
+  {
+    robot_->releaseStop();
+  }
+
+private:
+  BlockingRobot * robot_;
 };
 
 class FailingRobot final : public BlockingRobot
@@ -161,6 +204,22 @@ std::optional<FrankaCommandResult> waitForResult(OpcuaWorker & worker, std::uint
   return std::nullopt;
 }
 
+std::unordered_map<std::uint64_t, FrankaCommandResult> waitForResults(
+  OpcuaWorker & worker, std::size_t expected_count)
+{
+  std::unordered_map<std::uint64_t, FrankaCommandResult> results;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
+  while (std::chrono::steady_clock::now() < deadline && results.size() < expected_count) {
+    auto result = worker.tryGetResult();
+    if (result) {
+      results.emplace(result->command_id, std::move(*result));
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  }
+  return results;
+}
+
 }  // namespace
 
 TEST(OpcuaWorkerTest, StopInterruptsBlockingMove)
@@ -188,6 +247,60 @@ TEST(OpcuaWorkerTest, StopInterruptsBlockingMove)
 
   worker.stop();
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
+}
+
+TEST(OpcuaWorkerTest, StopCancelsQueuedCommandsAndReportsEveryResult)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  OpcuaWorker worker(std::move(robot), nullptr, 3);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(worker.enqueueCommand(command(1, FrankaCommandType::MoveToNamedPose, "p0")));
+  ASSERT_TRUE(robot_ptr->waitUntilMoveEntered());
+  ASSERT_TRUE(worker.enqueueCommand(command(2, FrankaCommandType::OpenBrakes)));
+  ASSERT_TRUE(worker.enqueueCommand(command(3, FrankaCommandType::CloseBrakes)));
+
+  ASSERT_TRUE(worker.enqueuePriority(command(4, FrankaCommandType::Stop)));
+
+  const auto results = waitForResults(worker, 4);
+  ASSERT_EQ(results.size(), 4u);
+  EXPECT_EQ(results.at(1).status, FrankaCommandStatus::Cancelled);
+  EXPECT_EQ(results.at(2).status, FrankaCommandStatus::Cancelled);
+  EXPECT_EQ(results.at(3).status, FrankaCommandStatus::Cancelled);
+  EXPECT_EQ(results.at(4).status, FrankaCommandStatus::Completed);
+  EXPECT_TRUE(robot_ptr->moveWasInterrupted());
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
+
+  worker.stop();
+}
+
+TEST(OpcuaWorkerTest, RejectsNormalCommandWhileStopIsPending)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->holdStopUntilReleased();
+  OpcuaWorker worker(std::move(robot), nullptr, 2);
+  StopReleaseGuard stop_release_guard(robot_ptr);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(worker.enqueueCommand(command(1, FrankaCommandType::MoveToNamedPose, "p0")));
+  ASSERT_TRUE(robot_ptr->waitUntilMoveEntered());
+  ASSERT_TRUE(worker.enqueuePriority(command(2, FrankaCommandType::Stop)));
+  ASSERT_TRUE(robot_ptr->waitUntilStopEntered());
+
+  EXPECT_FALSE(worker.enqueueCommand(command(3, FrankaCommandType::OpenBrakes)));
+  robot_ptr->releaseStop();
+
+  const auto results = waitForResults(worker, 2);
+  ASSERT_EQ(results.size(), 2u);
+  EXPECT_EQ(results.at(1).status, FrankaCommandStatus::Cancelled);
+  EXPECT_EQ(results.at(2).status, FrankaCommandStatus::Completed);
+  EXPECT_TRUE(robot_ptr->moveWasInterrupted());
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
+  EXPECT_FALSE(worker.tryGetResult().has_value());
+
+  worker.stop();
 }
 
 TEST(OpcuaWorkerTest, PriorityCommandIsRejectedBeforeWorkerIsReady)

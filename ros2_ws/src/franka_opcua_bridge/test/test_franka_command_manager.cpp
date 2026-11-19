@@ -35,6 +35,25 @@ TEST(FrankaCommandManagerTest, PriorityCommandsAreExtractedFirst)
   EXPECT_EQ(manager.waitAndPop()->command_id, 2u);
 }
 
+TEST(FrankaCommandManagerTest, EnqueueStopCancelsNormalQueueAndPreservesPriorityQueue)
+{
+  FrankaCommandManager manager(3);
+  ASSERT_TRUE(manager.enqueue(command(1)));
+  ASSERT_TRUE(manager.enqueue(command(2)));
+  ASSERT_TRUE(manager.enqueuePriority(command(3, FrankaCommandType::OpenBrakes)));
+
+  auto cancelled = manager.enqueueStop(command(4, FrankaCommandType::Stop));
+
+  ASSERT_TRUE(cancelled.has_value());
+  ASSERT_EQ(cancelled->size(), 2u);
+  EXPECT_EQ((*cancelled)[0].command_id, 1u);
+  EXPECT_EQ((*cancelled)[1].command_id, 2u);
+  EXPECT_EQ(manager.size(), 0u);
+  EXPECT_EQ(manager.prioritySize(), 2u);
+  EXPECT_EQ(manager.waitAndPop()->command_id, 3u);
+  EXPECT_EQ(manager.waitAndPop()->command_id, 4u);
+}
+
 TEST(FrankaCommandManagerTest, RejectsZeroCapacity)
 {
   EXPECT_THROW(FrankaCommandManager manager(0), std::invalid_argument);
