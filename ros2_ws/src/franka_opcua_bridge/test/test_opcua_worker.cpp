@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -8,6 +9,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 #include "franka_opcua_bridge/opcua_worker.hpp"
 
@@ -36,19 +38,27 @@ public:
 
   bool disconnect() override
   {
+    std::lock_guard<std::mutex> lock(mutex_);
     connected_ = false;
+    events_.push_back("disconnect");
     return true;
   }
 
   bool isConnected() const override {return connected_;}
   bool requestControl(bool) override {return connected_;}
-  bool releaseControl() override {return true;}
+  bool releaseControl() override
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    events_.push_back("release");
+    return true;
+  }
   bool openBrakes() override {return true;}
   bool closeBrakes() override {return true;}
   bool areBrakesOpen() override {return false;}
   bool stop() override
   {
     std::unique_lock<std::mutex> lock(mutex_);
+    events_.push_back("stop");
     stop_entered_ = true;
     condition_.notify_all();
     condition_.wait(lock, [this]() {return !hold_stop_ || stop_released_;});
@@ -90,7 +100,14 @@ public:
 
   std::unique_ptr<RobotStatus> readStatus() override
   {
-    return std::make_unique<RobotStatus>();
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (return_null_status_) {
+      return nullptr;
+    }
+    auto status = std::make_unique<RobotStatus>();
+    status->is_running = status_is_running_;
+    status->has_error = status_has_error_;
+    return status;
   }
 
   std::vector<double> readJointAngles() override {return {};}
@@ -115,6 +132,23 @@ public:
   bool moveWasInterrupted() const {return move_interrupted_;}
   int stopCallCount() const {return stop_call_count_;}
   void setCollisionAfterAbort(bool value) {collision_after_abort_.store(value);}
+  void setRobotStatus(bool is_running, bool has_error = false)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    status_is_running_ = is_running;
+    status_has_error_ = has_error;
+    return_null_status_ = false;
+  }
+  void setNullRobotStatus()
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return_null_status_ = true;
+  }
+  std::vector<std::string> events() const
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return events_;
+  }
   void holdStopUntilReleased()
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -137,6 +171,10 @@ private:
   bool stop_entered_ = false;
   bool hold_stop_ = false;
   bool stop_released_ = false;
+  bool status_is_running_ = false;
+  bool status_has_error_ = false;
+  bool return_null_status_ = false;
+  std::vector<std::string> events_;
   std::atomic_bool move_interrupted_{false};
   std::atomic_bool collision_after_abort_{false};
   std::atomic_int stop_call_count_{0};
@@ -324,6 +362,104 @@ TEST(OpcuaWorkerTest, StopWhenReadyDisconnectsWorker)
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
   EXPECT_FALSE(worker.enqueueCommand(command(1, FrankaCommandType::OpenBrakes)));
   EXPECT_FALSE(worker.start());
+}
+
+TEST(OpcuaWorkerTest, ShutdownStopsActiveTaskBeforeReleasingControl)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setRobotStatus(true);
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  worker.stop();
+
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
+  const auto events = robot_ptr->events();
+  const auto stop = std::find(events.begin(), events.end(), "stop");
+  const auto release = std::find(events.begin(), events.end(), "release");
+  const auto disconnect = std::find(events.begin(), events.end(), "disconnect");
+  ASSERT_NE(stop, events.end());
+  ASSERT_NE(release, events.end());
+  ASSERT_NE(disconnect, events.end());
+  EXPECT_LT(stop, release);
+  EXPECT_LT(release, disconnect);
+}
+
+TEST(OpcuaWorkerTest, ShutdownAbortsActiveMoveAndStopsTask)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setRobotStatus(true);
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(worker.enqueueCommand(command(1, FrankaCommandType::MoveToNamedPose, "p0")));
+  ASSERT_TRUE(robot_ptr->waitUntilMoveEntered());
+
+  worker.stop();
+
+  EXPECT_TRUE(robot_ptr->moveWasInterrupted());
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
+  auto move_result = worker.tryGetResult();
+  ASSERT_TRUE(move_result.has_value());
+  EXPECT_EQ(move_result->command_id, 1u);
+  EXPECT_EQ(move_result->status, FrankaCommandStatus::Cancelled);
+  const auto events = robot_ptr->events();
+  const auto stop = std::find(events.begin(), events.end(), "stop");
+  const auto release = std::find(events.begin(), events.end(), "release");
+  const auto disconnect = std::find(events.begin(), events.end(), "disconnect");
+  ASSERT_NE(stop, events.end());
+  ASSERT_NE(release, events.end());
+  ASSERT_NE(disconnect, events.end());
+  EXPECT_LT(stop, release);
+  EXPECT_LT(release, disconnect);
+}
+
+TEST(OpcuaWorkerTest, ShutdownSkipsStopWhenRobotIsConfirmedIdle)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setRobotStatus(false);
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  worker.stop();
+
+  EXPECT_EQ(robot_ptr->stopCallCount(), 0);
+  const auto events = robot_ptr->events();
+  EXPECT_EQ(std::find(events.begin(), events.end(), "stop"), events.end());
+  const auto release = std::find(events.begin(), events.end(), "release");
+  const auto disconnect = std::find(events.begin(), events.end(), "disconnect");
+  ASSERT_NE(release, events.end());
+  ASSERT_NE(disconnect, events.end());
+  EXPECT_LT(release, disconnect);
+}
+
+TEST(OpcuaWorkerTest, ShutdownAttemptsStopWhenRobotStatusHasError)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setRobotStatus(false, true);
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  worker.stop();
+
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
+}
+
+TEST(OpcuaWorkerTest, ShutdownAttemptsStopWhenRobotStatusIsUnavailable)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  BlockingRobot * robot_ptr = robot.get();
+  robot_ptr->setNullRobotStatus();
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  worker.stop();
+
+  EXPECT_EQ(robot_ptr->stopCallCount(), 1);
 }
 
 TEST(OpcuaWorkerTest, PreservesControllerFaultAsMoveFailure)

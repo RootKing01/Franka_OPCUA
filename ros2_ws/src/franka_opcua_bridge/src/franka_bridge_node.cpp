@@ -131,6 +131,18 @@ void FrankaBridgeNode::publishPendingResults()
   }
 }
 
+void FrankaBridgeNode::publishRejected(std::uint64_t request_id, const std::string & reason)
+{
+  franka_interfaces::msg::BridgeResult result;
+  result.request_id = request_id;
+  result.status = franka_interfaces::msg::BridgeResult::STATUS_REJECTED;
+  result.message = reason;
+  result_publisher_->publish(result);
+  RCLCPP_WARN(
+    get_logger(), "Richiesta rifiutata: request_id=%lu message='%s'",
+    static_cast<unsigned long>(request_id), reason.c_str());
+}
+
 
 void FrankaBridgeNode::commandCallback(
   const franka_interfaces::msg::BridgeCommand::SharedPtr msg)
@@ -170,9 +182,7 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_TASK:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(
-          get_logger(), "request_id=%lu: ID della task mancante",
-          static_cast<unsigned long>(msg->request_id));
+        publishRejected(msg->request_id, "Task ID is required");
         return;
       }
       command_type = FrankaCommandType::ExecuteNamedTask;
@@ -184,9 +194,7 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(
-          get_logger(), "request_id=%lu: ID della posa mancante",
-          static_cast<unsigned long>(msg->request_id));
+        publishRejected(msg->request_id, "Pose ID is required");
         return;
       }
       command_type = FrankaCommandType::MoveToNamedPose;
@@ -194,9 +202,7 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(
-          get_logger(), "request_id=%lu: ID della posa da salvare mancante",
-          static_cast<unsigned long>(msg->request_id));
+        publishRejected(msg->request_id, "Pose ID is required to save the current pose");
         return;
       }
       command_type = FrankaCommandType::SaveCurrentPose;
@@ -204,18 +210,14 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE:
       if (msg->parameter.empty()) {
-        RCLCPP_WARN(
-          get_logger(), "request_id=%lu: ID della posa da salvare mancante",
-          static_cast<unsigned long>(msg->request_id));
+        publishRejected(msg->request_id, "Pose ID is required to save an explicit pose");
         return;
       }
       command_type = FrankaCommandType::SaveExplicitPose;
       parameter = msg->parameter;
       break;
     default:
-      RCLCPP_WARN(
-        get_logger(), "request_id=%lu: comando ROS non riconosciuto",
-        static_cast<unsigned long>(msg->request_id));
+      publishRejected(msg->request_id, "Unknown command");
       return;
   }
 
@@ -238,9 +240,7 @@ void FrankaBridgeNode::commandCallback(
       get_logger(), "Comando accodato con request_id=%lu",
       static_cast<unsigned long>(request_id));
   } else {
-    RCLCPP_ERROR(
-      get_logger(), "Comando rifiutato dal worker, request_id=%lu",
-      static_cast<unsigned long>(request_id));
+    publishRejected(request_id, "Worker rejected the command (not ready, queue full, or stopping)");
   }
 }
 

@@ -134,7 +134,7 @@ void OpcuaWorker::stop()
     }
 
     worker_thread_.join();
-   
+
     lock.lock();
     worker_state_ = WorkerStatus::Disconnected;
     lock.unlock();
@@ -287,7 +287,7 @@ void OpcuaWorker::run()
   if (worker_state_ == WorkerStatus::Stopping) {
     RCLCPP_WARN(workerLogger(), "Arresto richiesto durante l'acquisizione del control token");
     lock.unlock();
-  
+
     franka_->releaseControl();
     franka_->disconnect();
 
@@ -331,20 +331,19 @@ void OpcuaWorker::run()
   }
 
   RCLCPP_INFO(workerLogger(), "Rilascio control token e disconnessione dal robot");
-  
+
   auto robotStat = robotStatus();
-  
+
   // A failed status read is unknown, not proof that the robot is idle; try to stop conservatively.
   if (robotStat == nullptr || robotStat->is_running || robotStat->has_error) {
     bool success = franka_->stop();
     if (success) {
       RCLCPP_INFO(workerLogger(), "Task robot arrestato durante lo shutdown");
-    }
-    else {
+    } else {
       RCLCPP_ERROR(workerLogger(), "Impossibile arrestare il task robot durante lo shutdown");
     }
   }
-  
+
   franka_->releaseControl();
   franka_->disconnect();
 
@@ -594,7 +593,8 @@ WorkerStatus OpcuaWorker::status() const
 
 }
 
-std::unique_ptr<RobotStatus> OpcuaWorker::robotStatus(){
+std::unique_ptr<RobotStatus> OpcuaWorker::robotStatus()
+{
 
   auto robotStatus = franka_->readStatus();
 

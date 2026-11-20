@@ -6,6 +6,7 @@
 #include "franka_interfaces/msg/bridge_result.hpp"
 
 #include <memory>
+#include <cstdint>
 #include <string>
 
 #include "franka_opcua_bridge/opcua_worker.hpp"
@@ -30,6 +31,7 @@ private:
   std::unique_ptr<OpcuaWorker> worker_;
 
   void publishPendingResults();
+  void publishRejected(std::uint64_t request_id, const std::string & reason);
 
   void commandCallback(
     const franka_interfaces::msg::BridgeCommand::SharedPtr msg);
