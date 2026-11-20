@@ -148,29 +148,6 @@ bool FrankaRobot::executeNamedTask(const std::string & task_id)
 }
 
 
-/* Codice non più necessario, lo tengo per sicurezza.
-
-template<typename T>
-T FrankaRobot::extractField(
-  const Value::Struct & fields, const std::string & key,
-  const T & default_value)
-{
-
-  Value out_value;
-  auto elem = fields.find(key);
-
-  if (elem != fields.end()) {        //.end() una "sentinella" che segna "oltre l'ultimo elemento", non un elemento vero
-
-    //trovato elem->first è la chiave, elem->second è il value
-    out_value = elem->second;
-
-    if (out_value.is<T>()) {return out_value.as<T>();} else {return default_value;}
-
-  } else {return default_value;}
-
-}
-*/
-
 std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 {
   auto robotStatus = std::make_unique<FrankaRobotStatus>();
