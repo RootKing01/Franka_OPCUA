@@ -79,6 +79,8 @@ private:
 
   void pushResult(FrankaCommandResult result);
 
+  std::unique_ptr<RobotStatus> robotStatus();
+
 };
 
 
