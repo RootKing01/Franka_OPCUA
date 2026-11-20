@@ -13,3 +13,7 @@ uint64 request_id
 uint8 status
 string message
 string[] task_ids
+uint64 queue_wait_us
+uint64 execution_us
+uint64 processing_us
+uint64 response_us

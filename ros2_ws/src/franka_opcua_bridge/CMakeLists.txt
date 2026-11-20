@@ -21,7 +21,8 @@ add_executable(franka_bridge_node
   src/franka_robot.cpp
   src/opcua_client.cpp
   src/franka_command_manager.cpp
-  src/opcua_worker.cpp)
+  src/opcua_worker.cpp
+  src/performance_monitor.cpp)
 
 ament_target_dependencies(franka_bridge_node franka_interfaces rclcpp geometry_msgs sensor_msgs)
 
@@ -86,10 +87,16 @@ if(BUILD_TESTING)
   ament_add_gtest(test_opcua_worker
     test/test_opcua_worker.cpp
     src/opcua_worker.cpp
-    src/franka_command_manager.cpp)
+    src/franka_command_manager.cpp
+    src/performance_monitor.cpp)
   target_include_directories(test_opcua_worker PUBLIC include)
   ament_target_dependencies(test_opcua_worker rclcpp geometry_msgs)
   target_link_libraries(test_opcua_worker Threads::Threads)
+
+  ament_add_gtest(test_performance_monitor
+    test/test_performance_monitor.cpp
+    src/performance_monitor.cpp)
+  target_include_directories(test_performance_monitor PUBLIC include)
 
   ament_add_gtest(test_franka
     test/test_franka.cpp

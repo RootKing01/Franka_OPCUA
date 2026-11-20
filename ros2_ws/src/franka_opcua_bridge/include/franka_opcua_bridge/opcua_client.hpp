@@ -4,6 +4,7 @@
 #include "franka_opcua_bridge/interfaces/i_opcua_protocol_client.hpp"
 #include "franka_opcua_bridge/opcua_value.hpp"
 #include "franka_opcua_bridge/opcua_namespace_tree.hpp"
+#include "franka_opcua_bridge/performance_monitor.hpp"
 
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
@@ -13,6 +14,7 @@
 #include <opc_ua_service_types_generated.h>
 #include <stdlib.h>
 #include <cstring>
+#include <memory>
 #include <optional>
 
 namespace franka_opcua_bridge
@@ -23,7 +25,7 @@ class OpcuaClient : public IOpcUaProtocolClient
 {
 
 public:
-  OpcuaClient() = default;
+  explicit OpcuaClient(std::shared_ptr<PerformanceMonitor> performance_monitor = {});
 
   //Disabilita copia
   OpcuaClient(const OpcuaClient &) = delete;
@@ -60,6 +62,7 @@ private:
   std::string endpoint_;
   std::string user_;
   UA_Client * client_ = nullptr;
+  std::shared_ptr<PerformanceMonitor> performance_monitor_;
   UA_DataTypeArray custom_data_types_{
     nullptr,
     UA_OPC_UA_SERVICE_TYPES_COUNT,

@@ -2,6 +2,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace franka_opcua_bridge
@@ -15,16 +16,52 @@ rclcpp::Logger workerLogger()
   return rclcpp::get_logger("franka_opcua_worker");
 }
 
+std::chrono::steady_clock::time_point commandReceivedAt(const FrankaRobotCommand & command)
+{
+  return command.received_at == std::chrono::steady_clock::time_point{} ?
+         command.created_at : command.received_at;
+}
+
+void populateCommandTimings(
+  const FrankaRobotCommand & command,
+  FrankaCommandResult & result,
+  std::chrono::steady_clock::time_point execution_started_at)
+{
+  result.received_at = commandReceivedAt(command);
+  result.queue_wait_duration = std::max(
+    std::chrono::steady_clock::duration::zero(), execution_started_at - command.created_at);
+  result.execution_duration = std::max(
+    std::chrono::steady_clock::duration::zero(), result.finished_at - execution_started_at);
+  result.processing_duration = std::max(
+    std::chrono::steady_clock::duration::zero(), result.finished_at - result.received_at);
+}
+
+void recordCommandTimings(
+  const std::shared_ptr<PerformanceMonitor> & performance_monitor,
+  const FrankaCommandResult & result)
+{
+  if (!performance_monitor) {
+    return;
+  }
+  const bool success = result.status != FrankaCommandStatus::Failed &&
+    result.status != FrankaCommandStatus::Timeout;
+  performance_monitor->record("command.queue_wait", result.queue_wait_duration, success);
+  performance_monitor->record("command.execution", result.execution_duration, success);
+  performance_monitor->record("command.processing", result.processing_duration, success);
+}
+
 }  // namespace
 
 OpcuaWorker::OpcuaWorker(
   std::unique_ptr<IFranka> robot,
   IPoseStorage * pose_storage,
   std::size_t command_capacity,
-  ITaskControl * task_control)
+  ITaskControl * task_control,
+  std::shared_ptr<PerformanceMonitor> performance_monitor)
 : franka_(std::move(robot)),
   pose_storage_(pose_storage),
   task_control_(task_control),
+  performance_monitor_(std::move(performance_monitor)),
   command_manager_(command_capacity),
   worker_state_(WorkerStatus::Disconnected)
 {
@@ -129,6 +166,8 @@ void OpcuaWorker::stop()
       result.status = FrankaCommandStatus::Cancelled;
       result.message = "Worker stoppato. Comando non eseguito";
       result.finished_at = std::chrono::steady_clock::now();
+      populateCommandTimings(*command, result, result.finished_at);
+      recordCommandTimings(performance_monitor_, result);
 
       pushResult(std::move(result));
     }
@@ -217,6 +256,8 @@ bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
     result.status = FrankaCommandStatus::Cancelled;
     result.message = "Comando annullato da STOP";
     result.finished_at = std::chrono::steady_clock::now();
+    populateCommandTimings(cancelled_command, result, result.finished_at);
+    recordCommandTimings(performance_monitor_, result);
     pushResult(std::move(result));
   }
 
@@ -315,6 +356,8 @@ void OpcuaWorker::run()
       break;       //shutdown
     }
 
+    const auto execution_started_at = std::chrono::steady_clock::now();
+
     RCLCPP_INFO(
       workerLogger(), "Esecuzione comando %lu, tipo %d, parametro '%s'",
       static_cast<unsigned long>(command->command_id),
@@ -322,6 +365,8 @@ void OpcuaWorker::run()
       command->parameter.c_str());
 
     auto result = executeCommand(*command);
+    populateCommandTimings(*command, result, execution_started_at);
+    recordCommandTimings(performance_monitor_, result);
     RCLCPP_INFO(
       workerLogger(), "Comando %lu terminato con stato %d: %s",
       static_cast<unsigned long>(result.command_id),

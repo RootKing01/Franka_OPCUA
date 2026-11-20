@@ -38,6 +38,7 @@ struct FrankaRobotCommand
   std::string parameter;
   std::optional<geometry_msgs::msg::Pose> pose;
   std::chrono::steady_clock::time_point created_at;
+  std::chrono::steady_clock::time_point received_at{};
 
 };
 

@@ -4,7 +4,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "franka_interfaces/msg/bridge_command.hpp"
 #include "franka_interfaces/msg/bridge_result.hpp"
+#include "franka_opcua_bridge/performance_monitor.hpp"
 
+#include <chrono>
 #include <memory>
 #include <cstdint>
 #include <string>
@@ -28,10 +30,15 @@ private:
 
   rclcpp::TimerBase::SharedPtr result_timer_;
 
+  std::shared_ptr<PerformanceMonitor> performance_monitor_;
+  std::chrono::steady_clock::time_point last_performance_report_{};
   std::unique_ptr<OpcuaWorker> worker_;
 
   void publishPendingResults();
-  void publishRejected(std::uint64_t request_id, const std::string & reason);
+  void publishRejected(
+    std::uint64_t request_id,
+    const std::string & reason,
+    std::chrono::steady_clock::time_point received_at);
 
   void commandCallback(
     const franka_interfaces::msg::BridgeCommand::SharedPtr msg);

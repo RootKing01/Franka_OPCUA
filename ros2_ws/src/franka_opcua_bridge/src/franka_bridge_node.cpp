@@ -21,6 +21,12 @@ namespace franka_opcua_bridge
 namespace
 {
 
+std::uint64_t durationMicroseconds(std::chrono::nanoseconds duration)
+{
+  const auto value = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+  return value > 0 ? static_cast<std::uint64_t>(value) : 0;
+}
+
 std::uint8_t commandStatusValue(FrankaCommandStatus status)
 {
   switch (status) {
@@ -57,7 +63,9 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
     robot_id.c_str());
 
   // Creazione client OPC UA
-  auto client = std::make_unique<OpcuaClient>();
+  performance_monitor_ = std::make_shared<PerformanceMonitor>();
+  last_performance_report_ = std::chrono::steady_clock::now();
+  auto client = std::make_unique<OpcuaClient>(performance_monitor_);
 
   // Creazione astrazione Franka
   auto robot = std::make_unique<FrankaRobot>(std::move(client));
@@ -66,7 +74,7 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
 
   //Creazione del worker
   worker_ = std::make_unique<OpcuaWorker>(
-    std::move(robot), pose_storage, 5, task_control);
+    std::move(robot), pose_storage, 5, task_control, performance_monitor_);
 
   //Avvio del worker
   if (!worker_->start()) {
@@ -120,23 +128,55 @@ void FrankaBridgeNode::publishPendingResults()
     message_result.status = commandStatusValue(result->status);
     message_result.message = result->message;
     message_result.task_ids = result->task_ids;
+    message_result.queue_wait_us = durationMicroseconds(result->queue_wait_duration);
+    message_result.execution_us = durationMicroseconds(result->execution_duration);
+    message_result.processing_us = durationMicroseconds(result->processing_duration);
+    message_result.response_us = durationMicroseconds(
+      std::chrono::steady_clock::now() - result->received_at);
     result_publisher_->publish(message_result);
     RCLCPP_INFO(
       get_logger(),
-      "Risultato pubblicato: request_id=%lu status=%u task_count=%zu message='%s'",
+      "Risultato pubblicato: request_id=%lu status=%u queue_us=%lu execution_us=%lu "
+      "processing_us=%lu response_us=%lu task_count=%zu message='%s'",
       static_cast<unsigned long>(message_result.request_id),
       static_cast<unsigned int>(message_result.status),
+      static_cast<unsigned long>(message_result.queue_wait_us),
+      static_cast<unsigned long>(message_result.execution_us),
+      static_cast<unsigned long>(message_result.processing_us),
+      static_cast<unsigned long>(message_result.response_us),
       message_result.task_ids.size(),
       message_result.message.c_str());
   }
+
+  const auto now = std::chrono::steady_clock::now();
+  if (now - last_performance_report_ >= std::chrono::seconds(10)) {
+    last_performance_report_ = now;
+    for (const auto & entry : performance_monitor_->takeSnapshot()) {
+      const auto average_ms = std::chrono::duration<double, std::milli>(
+        entry.second.total_duration).count() / static_cast<double>(entry.second.count);
+      const auto maximum_ms = std::chrono::duration<double, std::milli>(
+        entry.second.max_duration).count();
+      RCLCPP_INFO(
+        get_logger(),
+        "Performance: operation=%s count=%lu failures=%lu avg_ms=%.3f max_ms=%.3f",
+        entry.first.c_str(),
+        static_cast<unsigned long>(entry.second.count),
+        static_cast<unsigned long>(entry.second.failures), average_ms, maximum_ms);
+    }
+  }
 }
 
-void FrankaBridgeNode::publishRejected(std::uint64_t request_id, const std::string & reason)
+void FrankaBridgeNode::publishRejected(
+  std::uint64_t request_id,
+  const std::string & reason,
+  std::chrono::steady_clock::time_point received_at)
 {
   franka_interfaces::msg::BridgeResult result;
   result.request_id = request_id;
   result.status = franka_interfaces::msg::BridgeResult::STATUS_REJECTED;
   result.message = reason;
+  result.processing_us = durationMicroseconds(std::chrono::steady_clock::now() - received_at);
+  result.response_us = result.processing_us;
   result_publisher_->publish(result);
   RCLCPP_WARN(
     get_logger(), "Richiesta rifiutata: request_id=%lu message='%s'",
@@ -147,6 +187,7 @@ void FrankaBridgeNode::publishRejected(std::uint64_t request_id, const std::stri
 void FrankaBridgeNode::commandCallback(
   const franka_interfaces::msg::BridgeCommand::SharedPtr msg)
 {
+  const auto received_at = std::chrono::steady_clock::now();
   RCLCPP_DEBUG(
     get_logger(),
     "Comando ricevuto: request_id=%lu command=%u parameter='%s'",
@@ -182,7 +223,7 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_TASK:
       if (msg->parameter.empty()) {
-        publishRejected(msg->request_id, "Task ID is required");
+        publishRejected(msg->request_id, "Task ID is required", received_at);
         return;
       }
       command_type = FrankaCommandType::ExecuteNamedTask;
@@ -194,7 +235,7 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE:
       if (msg->parameter.empty()) {
-        publishRejected(msg->request_id, "Pose ID is required");
+        publishRejected(msg->request_id, "Pose ID is required", received_at);
         return;
       }
       command_type = FrankaCommandType::MoveToNamedPose;
@@ -202,7 +243,8 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE:
       if (msg->parameter.empty()) {
-        publishRejected(msg->request_id, "Pose ID is required to save the current pose");
+        publishRejected(
+          msg->request_id, "Pose ID is required to save the current pose", received_at);
         return;
       }
       command_type = FrankaCommandType::SaveCurrentPose;
@@ -210,14 +252,15 @@ void FrankaBridgeNode::commandCallback(
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE:
       if (msg->parameter.empty()) {
-        publishRejected(msg->request_id, "Pose ID is required to save an explicit pose");
+        publishRejected(
+          msg->request_id, "Pose ID is required to save an explicit pose", received_at);
         return;
       }
       command_type = FrankaCommandType::SaveExplicitPose;
       parameter = msg->parameter;
       break;
     default:
-      publishRejected(msg->request_id, "Unknown command");
+      publishRejected(msg->request_id, "Unknown command", received_at);
       return;
   }
 
@@ -229,6 +272,7 @@ void FrankaBridgeNode::commandCallback(
     robot_command.pose = msg->pose;
   }
   robot_command.created_at = std::chrono::steady_clock::now();
+  robot_command.received_at = received_at;
 
   const auto request_id = msg->request_id;
   const bool enqueued = priority ?
@@ -240,7 +284,8 @@ void FrankaBridgeNode::commandCallback(
       get_logger(), "Comando accodato con request_id=%lu",
       static_cast<unsigned long>(request_id));
   } else {
-    publishRejected(request_id, "Worker rejected the command (not ready, queue full, or stopping)");
+    publishRejected(
+      request_id, "Worker rejected the command (not ready, queue full, or stopping)", received_at);
   }
 }
 

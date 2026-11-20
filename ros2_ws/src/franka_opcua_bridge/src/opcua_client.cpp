@@ -22,6 +22,10 @@
 namespace franka_opcua_bridge
 {
 
+OpcuaClient::OpcuaClient(std::shared_ptr<PerformanceMonitor> performance_monitor)
+: performance_monitor_(std::move(performance_monitor))
+{}
+
 bool OpcuaClient::setEndpointAndUser(std::string endpoint, std::string user)
 {
 
@@ -140,7 +144,8 @@ CallResult OpcuaClient::callMethod(
   const std::string & method_name,
   const std::vector<Value> & args)
 {
-
+  ScopedPerformanceMeasurement measurement(
+    performance_monitor_, "opcua.call_method." + method_name);
 
   UA_NodeId object_id;
   UA_NodeId_init(&object_id);
@@ -224,7 +229,7 @@ CallResult OpcuaClient::callMethod(
   UA_NodeId_clear(&object_id);
   UA_NodeId_clear(&method_id);
 
-
+  measurement.setSuccess(true);
   return result;
 
 }
@@ -233,6 +238,7 @@ bool OpcuaClient::readValue(
   const std::vector<std::string> & variable_browse_path,
   Value & out_value)
 {
+  ScopedPerformanceMeasurement measurement(performance_monitor_, "opcua.read_value");
   UA_Variant variantOutput;
   UA_Variant_init(&variantOutput);
 
@@ -278,6 +284,7 @@ bool OpcuaClient::readValue(
 
   UA_NodeId_clear(&nodePath_id);
 
+  measurement.setSuccess(success);
   return success;
 }
 
@@ -285,6 +292,8 @@ bool OpcuaClient::writeValue(
   const std::vector<std::string> & variable_browse_path,
   const Value & out_value)
 {
+
+  ScopedPerformanceMeasurement measurement(performance_monitor_, "opcua.write_value");
 
   UA_Variant variantInput;
   UA_Variant_init(&variantInput);
@@ -306,7 +315,9 @@ bool OpcuaClient::writeValue(
   UA_Variant_clear(&variantInput);
   UA_NodeId_clear(&nodePath_id);
 
-  return status == UA_STATUSCODE_GOOD;
+  const bool success = status == UA_STATUSCODE_GOOD;
+  measurement.setSuccess(success);
+  return success;
 }
 
 // -- Conversione Value -> UA_Variant --

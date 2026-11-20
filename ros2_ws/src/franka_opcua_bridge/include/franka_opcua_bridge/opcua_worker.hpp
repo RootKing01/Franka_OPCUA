@@ -7,6 +7,7 @@
 #include "franka_opcua_bridge/interfaces/i_task_control.hpp"
 #include "franka_opcua_bridge/commands/franka_command_manager.hpp"
 #include "franka_opcua_bridge/commands/franka_command_result.hpp"
+#include "franka_opcua_bridge/performance_monitor.hpp"
 
 #include <thread>
 #include <memory>
@@ -40,7 +41,8 @@ public:
     std::unique_ptr<IFranka> robot,
     IPoseStorage * pose_storage,
     std::size_t command_capacity,
-    ITaskControl * task_control = nullptr);
+    ITaskControl * task_control = nullptr,
+    std::shared_ptr<PerformanceMonitor> performance_monitor = {});
 
   ~OpcuaWorker();
 
@@ -60,6 +62,7 @@ private:
   std::unique_ptr<IFranka> franka_;
   IPoseStorage * pose_storage_;
   ITaskControl * task_control_;
+  std::shared_ptr<PerformanceMonitor> performance_monitor_;
   FrankaCommandManager command_manager_;
   std::queue<FrankaCommandResult> result_queue_;
   mutable std::mutex mutex_;

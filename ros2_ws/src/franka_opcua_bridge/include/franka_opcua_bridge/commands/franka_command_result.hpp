@@ -34,6 +34,10 @@ struct FrankaCommandResult
   std::string message;
   std::vector<std::string> task_ids;
   std::chrono::steady_clock::time_point finished_at;
+  std::chrono::steady_clock::time_point received_at{};
+  std::chrono::nanoseconds queue_wait_duration{0};
+  std::chrono::nanoseconds execution_duration{0};
+  std::chrono::nanoseconds processing_duration{0};
 
 };
 

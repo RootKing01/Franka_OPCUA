@@ -22,6 +22,7 @@ using franka_opcua_bridge::OpcuaWorker;
 using franka_opcua_bridge::RobotStatus;
 using franka_opcua_bridge::MotionOutcome;
 using franka_opcua_bridge::MotionResult;
+using franka_opcua_bridge::PerformanceMonitor;
 using franka_opcua_bridge::WorkerStatus;
 
 namespace
@@ -285,6 +286,29 @@ TEST(OpcuaWorkerTest, StopInterruptsBlockingMove)
 
   worker.stop();
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
+}
+
+TEST(OpcuaWorkerTest, CapturesCommandTimingBreakdown)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  auto performance_monitor = std::make_shared<PerformanceMonitor>();
+  OpcuaWorker worker(std::move(robot), nullptr, 2, nullptr, performance_monitor);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(worker.enqueueCommand(command(1, FrankaCommandType::OpenBrakes)));
+
+  const auto result = waitForResult(worker, 1);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_GE(result->queue_wait_duration.count(), 0);
+  EXPECT_GE(result->execution_duration.count(), 0);
+  EXPECT_GE(result->processing_duration, result->execution_duration);
+
+  const auto snapshot = performance_monitor->takeSnapshot();
+  EXPECT_EQ(snapshot.at("command.queue_wait").count, 1u);
+  EXPECT_EQ(snapshot.at("command.execution").count, 1u);
+  EXPECT_EQ(snapshot.at("command.processing").count, 1u);
+
+  worker.stop();
 }
 
 TEST(OpcuaWorkerTest, StopCancelsQueuedCommandsAndReportsEveryResult)
