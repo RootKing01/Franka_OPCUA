@@ -604,28 +604,6 @@ std::optional<FrankaCommandResult> OpcuaWorker::tryGetResult()
   return result;
 }
 
-std::optional<FrankaCommandResult> OpcuaWorker::waitAndPopResult()
-{
-
-  std::unique_lock<std::mutex> lock(mutex_);
-
-  result_condition_.wait(
-    lock, [this] {
-      return !result_queue_.empty() || worker_state_ == WorkerStatus::Disconnected ||
-      worker_state_ == WorkerStatus::Error;
-    });
-
-  if (result_queue_.empty()) {return std::nullopt;}
-
-  FrankaCommandResult result = std::move(result_queue_.front());
-
-  result_queue_.pop();
-
-  return result;
-
-}
-
-
 WorkerStatus OpcuaWorker::status() const
 {
 

@@ -76,11 +76,6 @@ public:
 
   std::optional<namespaceTree> showAddressSpaceNodes() override;
 
-  /*
-  template<typename T>
-  T extractField(const Value::Struct & fields, const std::string & key, const T & default_value);
-  */
-
 protected:
   std::unique_ptr<IOpcUaProtocolClient> client_;
   std::chrono::milliseconds execution_timeout_;
