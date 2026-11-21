@@ -198,6 +198,7 @@ void FrankaBridgeNode::commandCallback(
   FrankaCommandType command_type;
   bool priority = false;
   std::string parameter;
+  std::vector<std::string> taskPoses;
 
   switch (msg->command) {
     case franka_interfaces::msg::BridgeCommand::COMMAND_OPEN_BRAKES:
@@ -234,12 +235,22 @@ void FrankaBridgeNode::commandCallback(
       priority = true;
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE:
+      if (msg->task_name.empty()) {
+        publishRejected(msg->request_id, "Task name is required", received_at);
+        return;
+      }
+
       if (msg->parameter.empty()) {
         publishRejected(msg->request_id, "Pose ID is required", received_at);
         return;
       }
+      if (msg->single_operation_pose.empty()) {
+        publishRejected(msg->request_id, "Task poses are required (at least one)", received_at);
+        return;
+      }
       command_type = FrankaCommandType::MoveToNamedPose;
       parameter = msg->parameter;
+      taskPoses = msg->single_operation_pose;
       break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE:
       if (msg->parameter.empty()) {
@@ -268,8 +279,14 @@ void FrankaBridgeNode::commandCallback(
   robot_command.command_id = msg->request_id;
   robot_command.type = command_type;
   robot_command.parameter = parameter;
+  robot_command.task_name = msg->task_name;
+
   if (msg->command == franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_EXPLICIT_POSE) {
     robot_command.pose = msg->pose;
+  }
+
+  if (msg->command == franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE) {
+    robot_command.task_poses = taskPoses;
   }
   robot_command.created_at = std::chrono::steady_clock::now();
   robot_command.received_at = received_at;

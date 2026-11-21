@@ -34,7 +34,9 @@ public:
 
   virtual bool executeNamedTask(const std::string & task_id) = 0;
   virtual MotionResult moveToNamedPose(
+    const std::string & taskname,
     const std::string & pose_id,
+    const std::vector<std::string> & task_poses,
     const std::function<bool()> & should_abort = {}) = 0;
 
   virtual bool stop() = 0;

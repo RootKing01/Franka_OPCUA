@@ -160,7 +160,9 @@ void FrankaFsmNode::runInteractiveMenu()
 
     switch (request->command) {
       case CommandType::Stop:
-        sendCommand(request->command, request->parameter, request->pose);
+        sendCommand(
+          request->command, request->task_name, request->parameter,
+          request->single_operation_pose, request->pose);
         continue;
       default:
         if (checkFullQueue()) {
@@ -168,7 +170,9 @@ void FrankaFsmNode::runInteractiveMenu()
           continue;
         }
 
-        sendCommand(request->command, request->parameter, request->pose);
+        sendCommand(
+          request->command, request->task_name, request->parameter,
+          request->single_operation_pose, request->pose);
         continue;
     }
 
@@ -256,7 +260,7 @@ std::optional<FrankaFsmNode::CommandRequest> FrankaFsmNode::readCommandRequest(
     return std::nullopt;
   }
 
-  CommandRequest request{CommandType::ShowTasks, "", std::nullopt};
+  CommandRequest request{CommandType::ShowTasks, "", "", {}, std::nullopt};
   if (choice == "1") {
     request.command = CommandType::ShowTasks;
   } else if (choice == "2") {
@@ -288,10 +292,37 @@ std::optional<FrankaFsmNode::CommandRequest> FrankaFsmNode::readCommandRequest(
     request.command = CommandType::SwitchToExec;
   } else if (choice == "9") {
     request.command = CommandType::ShowAddressSpaceNodes;
-  } else if (choice == "10" || choice == "11") {
-    request.command = choice == "10" ?
-      CommandType::MoveToNamedPose : CommandType::SaveCurrentPose;
+  } else if (choice == "10") {
+    request.command = CommandType::MoveToNamedPose;
+    std::cout << "Inserisci ID task: " << std::flush;
+
+    if (!std::getline(std::cin, request.task_name)) {
+      return std::nullopt;
+    }
+
+    std::cout << "Inserisci ID posa: " << std::flush;
+
+    if (!std::getline(std::cin, request.parameter)) {
+      return std::nullopt;
+    }
+
+    while (true) {
+      std::cout << "Inserisci target_pose_variable o 0 per terminare: " << std::flush;
+      std::string pose_id;
+      if (!std::getline(std::cin, pose_id)) {
+        return std::nullopt;
+      }
+      if (pose_id == "0") {
+        break;
+      }
+
+      if (!pose_id.empty()) {
+        request.single_operation_pose.push_back(pose_id);
+      }
+    }
+  } else if (choice == "11") {
     std::cout << "ID posa: " << std::flush;
+    request.command = CommandType::SaveCurrentPose;
     if (!std::getline(std::cin, request.parameter)) {
       return std::nullopt;
     }
@@ -335,10 +366,26 @@ std::optional<FrankaFsmNode::CommandRequest> FrankaFsmNode::readCommandRequest(
   return request;
 }
 
+std::string FrankaFsmNode::operationsPosePrint(const std::vector<std::string> & operationPose)
+{
+  std::ostringstream operations;
+  for (std::size_t i = 0; i < operationPose.size(); ++i) {
+    if (i > 0) {
+      operations << ", ";
+    }
+    operations << operationPose[i];
+  }
+  const std::string operations_text = operations.str();
+
+  return operations_text;
+
+}
 
 std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
   CommandType command,
+  const std::string & taskName,
   const std::string & parameter,
+  const std::vector<std::string> & operationPose,
   const std::optional<geometry_msgs::msg::Pose> & pose)
 {
 
@@ -349,6 +396,16 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
     command == CommandType::SaveExplicitPose;
   if (requires_parameter && parameter.empty()) {
     RCLCPP_WARN(get_logger(), "Parametro richiesto per il comando mancante");
+    return std::nullopt;
+  }
+
+  const bool requires_pose_operation = command == CommandType::MoveToNamedPose;
+  if (requires_pose_operation && taskName.empty()) {
+    RCLCPP_WARN(get_logger(), "Nessun task selezionato.");
+    return std::nullopt;
+  }
+  if (requires_pose_operation && operationPose.empty()) {
+    RCLCPP_WARN(get_logger(), "Nessuna posa per operazioni del task inserita.");
     return std::nullopt;
   }
   if (command == CommandType::SaveExplicitPose && !pose.has_value()) {
@@ -393,6 +450,8 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
       break;
     case CommandType::MoveToNamedPose:
       message.command = franka_interfaces::msg::BridgeCommand::COMMAND_MOVE_TO_NAMED_POSE;
+      message.task_name = taskName;
+      message.single_operation_pose = operationPose;
       break;
     case CommandType::SaveCurrentPose:
       message.command = franka_interfaces::msg::BridgeCommand::COMMAND_SAVE_CURRENT_POSE;
@@ -411,12 +470,16 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
       task_active_ = true;
     }
   }
+
+  std::string operations_text = operationsPosePrint(operationPose);
   RCLCPP_DEBUG(
     get_logger(),
-    "Invio comando=%u request_id=%lu parameter='%s'",
+    "Invio comando=%u request_id=%lu task_id='%s', parameter='%s', operation_poses= '[%s]'",
     static_cast<unsigned int>(message.command),
     static_cast<unsigned long>(request_id),
-    message.parameter.c_str());
+    message.task_name.c_str(),
+    message.parameter.c_str(),
+    operations_text.c_str());
   command_publisher_->publish(message);
   RCLCPP_INFO(
     get_logger(), "Comando pubblicato con request_id=%lu",

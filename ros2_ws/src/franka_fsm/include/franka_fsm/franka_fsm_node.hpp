@@ -53,7 +53,9 @@ private:
   struct CommandRequest
   {
     CommandType command;
+    std::string task_name;
     std::string parameter;
+    std::vector<std::string> single_operation_pose;
     std::optional<geometry_msgs::msg::Pose> pose;
   };
 
@@ -90,9 +92,12 @@ private:
 
   std::optional<std::uint64_t> sendCommand(
     CommandType command,
+    const std::string & task_name = "",
     const std::string & parameter = "",
+    const std::vector<std::string> & operationPose = {},
     const std::optional<geometry_msgs::msg::Pose> & pose = std::nullopt);
 
+  std::string operationsPosePrint(const std::vector<std::string> & operationPose);
   void showMainMenu(bool task_active) const;
   void showAvailableCommands() const;
   void showCommandMenu(bool task_active) const;

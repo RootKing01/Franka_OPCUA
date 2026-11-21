@@ -14,5 +14,7 @@ uint8 COMMAND_SAVE_EXPLICIT_POSE=12
 
 uint64 request_id
 uint8 command
+string task_name
 string parameter
+string[] single_operation_pose
 geometry_msgs/Pose pose

@@ -32,7 +32,9 @@ bool FakeRobot::executeNamedTask(const std::string & task_id)
 }
 
 MotionResult FakeRobot::moveToNamedPose(
+  const std::string & task_name,
   const std::string & pose_id,
+  const std::vector<std::string> &,
   const std::function<bool()> & should_abort)
 {
   if (should_abort && should_abort()) {
@@ -42,7 +44,7 @@ MotionResult FakeRobot::moveToNamedPose(
     return {MotionOutcome::Failed, "Brakes are closed"};
   }
   last_pose_ = pose_id;
-  last_task_ = "opcua_goto";
+  last_task_ = task_name;
   return {MotionOutcome::Completed, "Pose reached"};
 }
 

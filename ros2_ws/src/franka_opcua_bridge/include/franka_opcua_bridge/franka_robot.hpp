@@ -51,7 +51,9 @@ public:
 
   bool executeNamedTask(const std::string & task_id) override;
   MotionResult moveToNamedPose(
+    const std::string & taskname,
     const std::string & pose_id,
+    const std::vector<std::string> & task_poses,
     const std::function<bool()> & should_abort = {}) override;
 
   std::unique_ptr<RobotStatus> readStatus() override;

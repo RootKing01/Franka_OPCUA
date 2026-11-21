@@ -465,7 +465,9 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
 
     case FrankaCommandType::MoveToNamedPose: {
         const MotionResult motion = franka_->moveToNamedPose(
+          command.task_name,
           command.parameter,
+          command.task_poses,
           [this]() {return abort_requested_.load();});
         if (motion.outcome != MotionOutcome::Cancelled) {
           std::lock_guard<std::mutex> lock(mutex_);

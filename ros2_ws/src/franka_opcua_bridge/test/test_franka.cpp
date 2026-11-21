@@ -393,7 +393,7 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, false, "", "", ""}));
 
-  const auto move_result = robot.moveToNamedPose(pose_id);
+  const auto move_result = robot.moveToNamedPose("opcua_goto", pose_id, {"target_pose"});
   ASSERT_EQ(move_result.outcome, MotionOutcome::Completed);
 
   const auto & log = fake_ptr->callLog();
@@ -447,7 +447,8 @@ TEST(FrankaRobotTest, ControllerFaultIsNotReportedAsCancellation)
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{true, false, collision_error, "", ""}));
 
-  const auto result = robot.moveToNamedPose(pose_id, []() {return true;});
+  const auto result = robot.moveToNamedPose(
+    "opcua_goto", pose_id, {"target_pose"}, []() {return true;});
 
   EXPECT_EQ(result.outcome, MotionOutcome::Failed);
   EXPECT_EQ(result.message, collision_error);
@@ -473,7 +474,8 @@ TEST(FrankaRobotTest, StopRequestCancelsMoveWithoutCallingStopTask)
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, true, "", "opcua_goto", "task_0"}));
 
-  const auto result = robot.moveToNamedPose(pose_id, []() {return true;});
+  const auto result = robot.moveToNamedPose(
+    "opcua_goto", pose_id, {"target_pose"}, []() {return true;});
 
   EXPECT_EQ(result.outcome, MotionOutcome::Cancelled);
   const auto & calls = fake_ptr->callLog();

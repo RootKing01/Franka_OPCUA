@@ -79,7 +79,9 @@ TEST(FakeRobotTest, MoveToNamedPoseUpdatesStatus)
   FakeRobot robot;
   robot.connect();
   robot.openBrakes();
-  EXPECT_EQ(robot.moveToNamedPose("p0").outcome, MotionOutcome::Completed);
+  EXPECT_EQ(
+    robot.moveToNamedPose("opcua_goto", "p0", {"target_pose"}).outcome,
+    MotionOutcome::Completed);
   EXPECT_EQ(robot.lastPoseTarget(), "p0");
 }
 

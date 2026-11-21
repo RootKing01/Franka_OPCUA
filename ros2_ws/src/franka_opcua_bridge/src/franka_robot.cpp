@@ -288,7 +288,9 @@ geometry_msgs::msg::Wrench FrankaRobot::readWrench()
 }
 
 MotionResult FrankaRobot::moveToNamedPose(
+  const std::string & task_name,
   const std::string & pose_id,
+  const std::vector<std::string> & task_poses,
   const std::function<bool()> & should_abort)
 {
   std::vector<std::string> pathKeyPose = kPoseMapPath;
@@ -333,14 +335,16 @@ MotionResult FrankaRobot::moveToNamedPose(
   // Key   = "target_pose"
   // Value = matrice 4x4 (16 double)
 
-  if (!buildKeyPosePair("target_pose", values)) {
+  const std::string & target_pose_variable = task_poses[0];
+
+  if (!buildKeyPosePair(target_pose_variable, values)) {
     return {MotionOutcome::Failed, "Failed to write target pose"};
   }
 
   // Avvia il task che utilizza target_pose
   std::cerr << "[MOVE] target_pose scritto. Avvio opcua_goto" << std::endl;
 
-  bool task_result = executeNamedTask("opcua_goto");
+  bool task_result = executeNamedTask(task_name);
 
   std::cerr << "[MOVE] StartTask opcua_goto: result="
             << task_result << std::endl;
@@ -366,7 +370,7 @@ MotionResult FrankaRobot::moveToNamedPose(
       return {MotionOutcome::Cancelled, "Motion cancelled by stop request"};
     }
 
-    if (status->is_running || status->active_task_name == "opcua_goto") {
+    if (status->is_running || status->active_task_name == task_name) {
       task_started = true;
     } else if (task_started) {
       return {MotionOutcome::Completed, "Pose reached"};

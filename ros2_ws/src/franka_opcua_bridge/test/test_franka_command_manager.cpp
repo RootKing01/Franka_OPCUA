@@ -18,7 +18,11 @@ FrankaRobotCommand command(
   std::uint64_t id,
   FrankaCommandType type = FrankaCommandType::OpenBrakes)
 {
-  return FrankaRobotCommand{id, type, {}, std::nullopt, std::chrono::steady_clock::now()};
+  FrankaRobotCommand result{};
+  result.command_id = id;
+  result.type = type;
+  result.created_at = std::chrono::steady_clock::now();
+  return result;
 }
 
 }  // namespace

@@ -71,6 +71,8 @@ public:
 
   MotionResult moveToNamedPose(
     const std::string &,
+    const std::string &,
+    const std::vector<std::string> &,
     const std::function<bool()> & should_abort) override
   {
     {
@@ -227,7 +229,16 @@ FrankaRobotCommand command(
   std::uint64_t id, FrankaCommandType type,
   const std::string & parameter = {})
 {
-  return FrankaRobotCommand{id, type, parameter, std::nullopt, std::chrono::steady_clock::now()};
+  FrankaRobotCommand result{};
+  result.command_id = id;
+  result.type = type;
+  result.task_name = type == FrankaCommandType::MoveToNamedPose ? "opcua_goto" : "";
+  result.parameter = parameter;
+  if (type == FrankaCommandType::MoveToNamedPose) {
+    result.task_poses = {"target_pose"};
+  }
+  result.created_at = std::chrono::steady_clock::now();
+  return result;
 }
 
 std::optional<FrankaCommandResult> waitForResult(OpcuaWorker & worker, std::uint64_t command_id)
