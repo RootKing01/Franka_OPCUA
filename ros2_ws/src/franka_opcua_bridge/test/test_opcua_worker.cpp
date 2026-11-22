@@ -67,7 +67,15 @@ public:
     return true;
   }
 
-  bool executeNamedTask(const std::string &) override {return true;}
+  franka_opcua_bridge::TaskExecutionResult executeNamedTask(
+    const std::string &,
+    const std::function<bool()> & should_abort = {}) override
+  {
+    if (should_abort && should_abort()) {
+      return {franka_opcua_bridge::TaskState::Cancelled, "Task cancelled by stop request"};
+    }
+    return {franka_opcua_bridge::TaskState::Completed, "Task completed"};
+  }
 
   MotionResult moveToNamedPose(
     const std::string &,
@@ -297,6 +305,24 @@ TEST(OpcuaWorkerTest, StopInterruptsBlockingMove)
 
   worker.stop();
   EXPECT_EQ(worker.status(), WorkerStatus::Disconnected);
+}
+
+TEST(OpcuaWorkerTest, ReportsNamedTaskOnlyAfterTerminalTaskResult)
+{
+  auto robot = std::make_unique<BlockingRobot>();
+  OpcuaWorker worker(std::move(robot), nullptr, 1);
+
+  ASSERT_TRUE(worker.start());
+  ASSERT_TRUE(
+    worker.enqueueCommand(
+      command(1, FrankaCommandType::ExecuteNamedTask, "pick_task")));
+
+  const auto result = waitForResult(worker, 1);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->status, FrankaCommandStatus::Completed);
+  EXPECT_EQ(result->message, "Task completed");
+
+  worker.stop();
 }
 
 TEST(OpcuaWorkerTest, CapturesCommandTimingBreakdown)

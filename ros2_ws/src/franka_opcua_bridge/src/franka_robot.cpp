@@ -128,23 +128,65 @@ bool FrankaRobot::releaseControl()
   return result.ok;
 }
 
-bool FrankaRobot::executeNamedTask(const std::string & task_id)
+TaskExecutionResult FrankaRobot::executeNamedTask(
+  const std::string & task_id,
+  const std::function<bool()> & should_abort)
 {
+  if (task_id.empty()) {
+    return {TaskState::Failed, "Task name is required"};
+  }
 
-  std::vector<Value> args;
-  Value elem{std::string(task_id)}; //Value elem(std::string(task_id))->"Vexing Parse:"Questo è un caso classico e famoso in C++
-                                    //(chiamato "most vexing parse"): il compilatore interpreta questa sintassi come la dichiarazione
-                                    //di una funzione chiamata elem, che prende un std::string e restituisce un Value — non come la
-                                    //costruzione di una variabile. È ambiguo per il linguaggio, anche se l'intento è chiaro a noi.
+  const auto initial_status = readStatus();
+  if (!initial_status || initial_status->has_error) {
+    const std::string message = initial_status ? initial_status->error_message :
+      "Failed to read robot execution status before starting task";
+    return {TaskState::Failed, message};
+  }
+  if (initial_status->is_running) {
+    return {TaskState::Failed, "Cannot start a task while another task is running"};
+  }
 
+  TaskState state = TaskState::Starting;
+  const CallResult start_result = client_->callMethod(
+    kExecutionControlPath, "StartTask", {Value(task_id)});
+  if (!start_result.ok) {
+    return {TaskState::Failed, "Failed to start task: " + start_result.error_message};
+  }
 
-  args.push_back(elem);
+  constexpr auto kPollingPeriod = std::chrono::milliseconds(100);
+  const auto deadline = std::chrono::steady_clock::now() + execution_timeout_;
 
-  CallResult result = client_->callMethod(kExecutionControlPath, "StartTask", args);
+  while (std::chrono::steady_clock::now() < deadline) {
+    const auto status = readStatus();
+    if (!status || status->has_error) {
+      const std::string message = status ? status->error_message :
+        "Failed to read robot execution status";
+      return {TaskState::Failed, message};
+    }
 
-  return result.ok;
+    if (status->is_running && status->active_task_name == task_id) {
+      state = TaskState::Running;
+    } else if (state == TaskState::Running) {
+      if (!status->is_running) {
+        return {TaskState::Completed, "Task completed"};
+      }
+      return {TaskState::Failed, "Requested task is no longer active"};
+    }
 
+    if (should_abort && should_abort()) {
+      state = TaskState::Stopping;
+      return {TaskState::Cancelled, "Task cancelled by stop request"};
+    }
 
+    std::this_thread::sleep_for(kPollingPeriod);
+  }
+
+  state = TaskState::Stopping;
+  const bool stopped = stop();
+  return {
+    TaskState::Timeout,
+    stopped ? "Timed out waiting for task completion; stop requested" :
+    "Timed out waiting for task completion; failed to stop task"};
 }
 
 
@@ -293,6 +335,10 @@ MotionResult FrankaRobot::moveToNamedPose(
   const std::vector<std::string> & task_poses,
   const std::function<bool()> & should_abort)
 {
+  if (task_poses.empty()) {
+    return {MotionOutcome::Failed, "Task pose variable is required"};
+  }
+
   std::vector<std::string> pathKeyPose = kPoseMapPath;
   std::vector<Value> args;
   CallResult result;
@@ -344,43 +390,27 @@ MotionResult FrankaRobot::moveToNamedPose(
   // Avvia il task che utilizza target_pose
   std::cerr << "[MOVE] target_pose scritto. Avvio opcua_goto" << std::endl;
 
-  bool task_result = executeNamedTask(task_name);
+  const TaskExecutionResult task_result = executeNamedTask(task_name, should_abort);
+  std::cerr << "[MOVE] StartTask " << task_name
+            << ": state=" << static_cast<int>(task_result.state)
+            << ", message='" << task_result.message << "'" << std::endl;
 
-  std::cerr << "[MOVE] StartTask opcua_goto: result="
-            << task_result << std::endl;
-
-  if (!task_result) {
-    return {MotionOutcome::Failed, "Failed to start opcua_goto task"};
-  }
-
-  constexpr auto kPollingPeriod = std::chrono::milliseconds(100);
-  const auto deadline = std::chrono::steady_clock::now() + execution_timeout_;
-  bool task_started = false;
-
-  while (std::chrono::steady_clock::now() < deadline) {
-    const auto status = readStatus();
-
-    if (!status) {
-      return {MotionOutcome::Failed, "Failed to read robot execution status"};
-    }
-    if (status->has_error) {
-      return {MotionOutcome::Failed, status->error_message};
-    }
-    if (should_abort && should_abort()) {
-      return {MotionOutcome::Cancelled, "Motion cancelled by stop request"};
-    }
-
-    if (status->is_running || status->active_task_name == task_name) {
-      task_started = true;
-    } else if (task_started) {
+  switch (task_result.state) {
+    case TaskState::Completed:
       return {MotionOutcome::Completed, "Pose reached"};
-    }
-
-    std::this_thread::sleep_for(kPollingPeriod);
+    case TaskState::Cancelled:
+      return {MotionOutcome::Cancelled, task_result.message};
+    case TaskState::Timeout:
+      return {MotionOutcome::Timeout, task_result.message};
+    case TaskState::Unknown:
+    case TaskState::Idle:
+    case TaskState::Starting:
+    case TaskState::Running:
+    case TaskState::Stopping:
+    case TaskState::Failed:
+      return {MotionOutcome::Failed, task_result.message};
   }
-
-  stop();
-  return {MotionOutcome::Timeout, "Timed out while waiting for pose motion to finish"};
+  return {MotionOutcome::Failed, "Unexpected task state"};
 }
 
 std::vector<double> FrankaRobot::fromPoseToVector(const geometry_msgs::msg::Pose & pose)

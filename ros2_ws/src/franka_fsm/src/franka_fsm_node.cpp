@@ -62,11 +62,11 @@ FrankaFsmNode::FrankaFsmNode()
             }
           }
           if (command == CommandType::ExecuteTask) {
-            task_active_ = true;
-            state_ = FsmState::TaskRunning;
+            task_active_ = false;
+            state_ = FsmState::Completed;
             RCLCPP_INFO(
               get_logger(),
-              "Task OPC UA avviata; invia STOP per interromperla");
+              "Task OPC UA completata");
           } else if (command == CommandType::MoveToNamedPose) {
             task_active_ = false;
             state_ = FsmState::Completed;

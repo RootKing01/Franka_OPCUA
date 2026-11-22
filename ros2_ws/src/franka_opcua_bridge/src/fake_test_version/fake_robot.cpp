@@ -24,11 +24,16 @@ bool FakeRobot::closeBrakes()
 
 bool FakeRobot::stop() {last_task_ = ""; return true;}
 
-bool FakeRobot::executeNamedTask(const std::string & task_id)
+TaskExecutionResult FakeRobot::executeNamedTask(
+  const std::string & task_id,
+  const std::function<bool()> & should_abort)
 {
-  if (!brakes_open_) {return false;}
+  if (should_abort && should_abort()) {
+    return {TaskState::Cancelled, "Task cancelled by request"};
+  }
+  if (!brakes_open_) {return {TaskState::Failed, "Brakes are closed"};}
   last_task_ = task_id;
-  return true;
+  return {TaskState::Completed, "Task completed"};
 }
 
 MotionResult FakeRobot::moveToNamedPose(

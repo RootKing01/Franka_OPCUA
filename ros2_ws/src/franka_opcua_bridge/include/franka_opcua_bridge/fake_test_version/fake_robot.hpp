@@ -20,7 +20,9 @@ public:
   bool closeBrakes() override;
   bool areBrakesOpen() {return brakes_open_;}
   bool stop() override;
-  bool executeNamedTask(const std::string & task_id) override;
+  TaskExecutionResult executeNamedTask(
+    const std::string & task_id,
+    const std::function<bool()> & should_abort = {}) override;
   MotionResult moveToNamedPose(
     const std::string & taskname,
     const std::string & pose_id,

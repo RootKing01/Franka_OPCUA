@@ -287,8 +287,18 @@ TEST(FrankaRobotTest, executeNamedPoseCallsCorrectMethod) {
   bool success = robot.connect();
   ASSERT_TRUE(success);
 
-  bool taskStarted = robot.executeNamedTask(task_id);
-  EXPECT_TRUE(taskStarted);
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, true, "", task_id, "task_0"}));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
+
+  const auto task_result = robot.executeNamedTask(task_id);
+  EXPECT_EQ(task_result.state, franka_opcua_bridge::TaskState::Completed);
 
   const auto & log = fake_ptr->callLog();
   ASSERT_EQ(log.size(), 1u);
@@ -388,6 +398,9 @@ TEST(FrankaRobotTest, MoveToNamedPoseCall) {
 
   fake_ptr->queueValue(
     {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, true, "", "opcua_goto", "opcua_goto"}));
   fake_ptr->queueValue(
     {"Robot", "ExecutionControl", "ExecutionStatus"},
@@ -445,6 +458,9 @@ TEST(FrankaRobotTest, ControllerFaultIsNotReportedAsCancellation)
   fake_ptr->writeValue(pose_path, Value(std::vector<double>(16, 0.0)));
   fake_ptr->queueValue(
     {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{true, false, collision_error, "", ""}));
 
   const auto result = robot.moveToNamedPose(
@@ -470,6 +486,9 @@ TEST(FrankaRobotTest, StopRequestCancelsMoveWithoutCallingStopTask)
   ASSERT_TRUE(robot.connect());
 
   fake_ptr->writeValue(pose_path, Value(std::vector<double>(16, 0.0)));
+  fake_ptr->queueValue(
+    {"Robot", "ExecutionControl", "ExecutionStatus"},
+    Value(ExecutionStatusValue{false, false, "", "", ""}));
   fake_ptr->queueValue(
     {"Robot", "ExecutionControl", "ExecutionStatus"},
     Value(ExecutionStatusValue{false, true, "", "opcua_goto", "task_0"}));

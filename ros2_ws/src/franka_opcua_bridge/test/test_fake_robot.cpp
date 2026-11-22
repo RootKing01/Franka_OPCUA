@@ -24,7 +24,7 @@ TEST(FakeRobotTest, TaskFailsIfBrakesClosed)
 {
   FakeRobot robot;
   robot.connect();
-  EXPECT_FALSE(robot.executeNamedTask("some_task"));
+  EXPECT_EQ(robot.executeNamedTask("some_task").state, franka_opcua_bridge::TaskState::Failed);
 }
 
 TEST(FakeRobotTest, TaskSucceedsIfBrakesOpen)
@@ -32,7 +32,7 @@ TEST(FakeRobotTest, TaskSucceedsIfBrakesOpen)
   FakeRobot robot;
   robot.connect();
   robot.openBrakes();
-  EXPECT_TRUE(robot.executeNamedTask("some_task"));
+  EXPECT_EQ(robot.executeNamedTask("some_task").state, franka_opcua_bridge::TaskState::Completed);
 
   auto status = robot.readStatus();
   EXPECT_TRUE(status->is_running);
@@ -90,7 +90,9 @@ TEST(FakeRobotTest, WorksThroughAbstractInterface)
   std::unique_ptr<IFranka> robot = std::make_unique<FakeRobot>();
   EXPECT_TRUE(robot->connect());
   EXPECT_TRUE(robot->openBrakes());
-  EXPECT_TRUE(robot->executeNamedTask("test_task"));
+  EXPECT_EQ(
+    robot->executeNamedTask("test_task").state,
+    franka_opcua_bridge::TaskState::Completed);
 }
 
 int main(int argc, char ** argv)

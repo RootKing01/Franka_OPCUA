@@ -3,6 +3,7 @@
 
 #include "franka_opcua_bridge/interfaces/i_robot.hpp"
 #include "franka_opcua_bridge/opcua_namespace_tree.hpp"
+#include "franka_opcua_bridge/interfaces/task_state.hpp"
 
 #include <functional>
 #include <string>
@@ -32,7 +33,9 @@ public:
   virtual bool requestControl(bool force) = 0;
   virtual bool releaseControl() = 0;
 
-  virtual bool executeNamedTask(const std::string & task_id) = 0;
+  virtual TaskExecutionResult executeNamedTask(
+    const std::string & task_id,
+    const std::function<bool()> & should_abort = {}) = 0;
   virtual MotionResult moveToNamedPose(
     const std::string & taskname,
     const std::string & pose_id,

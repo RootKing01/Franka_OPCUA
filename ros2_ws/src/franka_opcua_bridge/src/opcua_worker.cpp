@@ -458,10 +458,40 @@ FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & comma
         break;
       }
 
-    case FrankaCommandType::ExecuteNamedTask:
-      success = franka_->executeNamedTask(command.parameter);
-      message = success ? "Task executed" : "Failed to execute task";
-      break;
+    case FrankaCommandType::ExecuteNamedTask: {
+        const TaskExecutionResult task_result = franka_->executeNamedTask(
+          command.parameter,
+          [this]() {return abort_requested_.load();});
+        if (task_result.state == TaskState::Completed) {
+          std::lock_guard<std::mutex> lock(mutex_);
+          if (stop_pending_ && abort_requested_.load()) {
+            stop_not_needed_ = true;
+          }
+        }
+        result.message = task_result.message;
+        switch (task_result.state) {
+          case TaskState::Completed:
+            result.status = FrankaCommandStatus::Completed;
+            break;
+          case TaskState::Cancelled:
+            result.status = FrankaCommandStatus::Cancelled;
+            break;
+          case TaskState::Timeout:
+            result.status = FrankaCommandStatus::Timeout;
+            break;
+          case TaskState::Failed:
+          case TaskState::Unknown:
+          case TaskState::Idle:
+          case TaskState::Starting:
+          case TaskState::Running:
+          case TaskState::Stopping:
+          default:
+            result.status = FrankaCommandStatus::Failed;
+            break;
+        }
+        result.finished_at = std::chrono::steady_clock::now();
+        return result;
+      }
 
     case FrankaCommandType::MoveToNamedPose: {
         const MotionResult motion = franka_->moveToNamedPose(
