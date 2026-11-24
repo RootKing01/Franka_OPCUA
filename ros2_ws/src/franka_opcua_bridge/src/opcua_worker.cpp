@@ -820,6 +820,20 @@ bool OpcuaWorker::startActiveTask(const FrankaRobotCommand & command)
 
   const auto started_at = std::chrono::steady_clock::now();
 
+  const auto status = franka_->readStatus();
+  if (!status || status->has_error || status->is_running) {
+    FrankaCommandResult result;
+    result.command_id = command.command_id;
+    result.status = FrankaCommandStatus::Failed;
+    result.message = !status ? "Unable to read robot status before task start" :
+      (status->has_error ? status->error_message : "Another robot task is already running");
+    result.finished_at = std::chrono::steady_clock::now();
+    populateCommandTimings(command, result, started_at);
+    recordCommandTimings(performance_monitor_, result);
+    pushResult(std::move(result));
+    return false;
+  }
+
   if (!franka_->setIntegerVariable("decision_code", 0) ||
     !franka_->setIntegerVariable("process_state", 0))
   {
@@ -876,7 +890,13 @@ void OpcuaWorker::monitorActiveTask()
   }
 
   constexpr auto kExecutionTimeout = std::chrono::seconds(60);
-  if (std::chrono::steady_clock::now() - active_task_->started_at >= kExecutionTimeout) {
+  const auto now = std::chrono::steady_clock::now();
+  auto active_duration = now - active_task_->started_at -
+    active_task_->decision_wait_duration;
+  if (active_task_->decision_wait_started) {
+    active_duration -= now - *active_task_->decision_wait_started;
+  }
+  if (active_duration >= kExecutionTimeout) {
     const bool stopped = franka_->stop();
     completeActiveTask(
       FrankaCommandStatus::Timeout,
@@ -943,9 +963,15 @@ void OpcuaWorker::monitorActiveTask()
   // Possiamo dichiarare completata la task soltanto se prima
   // abbiamo effettivamente osservato la sua esecuzione.
   if (active_task_->execution_observed) {
-    completeActiveTask(
-      FrankaCommandStatus::Completed,
-      "Task completed successfully");
+    if (active_task_->phase == TaskPhase::WaitingDecision) {
+      completeActiveTask(
+        FrankaCommandStatus::Failed,
+        "Robot stopped while waiting for an operator decision");
+    } else {
+      completeActiveTask(
+        FrankaCommandStatus::Completed,
+        "Task completed successfully");
+    }
   }
 }
 
@@ -1107,6 +1133,11 @@ void OpcuaWorker::processActiveTask()
       return;
     }
 
+    if (active_task_->decision_wait_started) {
+      active_task_->decision_wait_duration +=
+        std::chrono::steady_clock::now() - *active_task_->decision_wait_started;
+      active_task_->decision_wait_started.reset();
+    }
     active_task_->phase = TaskPhase::ApplyingDecision;
   }
 
@@ -1179,6 +1210,7 @@ void OpcuaWorker::processActiveTask()
   ++active_task_->next_decision_id;
   active_task_->decision_requested_for_checkpoint = true;
   active_task_->phase = TaskPhase::WaitingDecision;
+  active_task_->decision_wait_started = std::chrono::steady_clock::now();
 }
 
 void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)

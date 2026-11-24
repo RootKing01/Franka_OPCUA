@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <chrono>
+#include <optional>
 
 #include "franka_opcua_bridge/interfaces/task_state.hpp"
 #include "franka_opcua_bridge/commands/franka_command.hpp"
@@ -27,6 +28,8 @@ namespace franka_opcua_bridge{
         bool execution_observed{false};
         bool decision_requested_for_checkpoint{false};
         std::uint64_t next_decision_id{1};
+        std::chrono::steady_clock::duration decision_wait_duration{};
+        std::optional<std::chrono::steady_clock::time_point> decision_wait_started;
     };
 
 }
