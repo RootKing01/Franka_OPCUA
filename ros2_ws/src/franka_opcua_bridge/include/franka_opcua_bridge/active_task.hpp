@@ -25,6 +25,8 @@ namespace franka_opcua_bridge{
 
         std::chrono::steady_clock::time_point started_at;
         bool execution_observed{false};
+        bool decision_requested_for_checkpoint{false};
+        std::uint64_t next_decision_id{1};
     };
 
 }

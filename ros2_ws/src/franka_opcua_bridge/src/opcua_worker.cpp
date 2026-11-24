@@ -820,6 +820,20 @@ bool OpcuaWorker::startActiveTask(const FrankaRobotCommand & command)
 
   const auto started_at = std::chrono::steady_clock::now();
 
+  if (!franka_->setIntegerVariable("decision_code", 0) ||
+    !franka_->setIntegerVariable("process_state", 0))
+  {
+    FrankaCommandResult result;
+    result.command_id = command.command_id;
+    result.status = FrankaCommandStatus::Failed;
+    result.message = "Failed to reset decision variables before starting task";
+    result.finished_at = std::chrono::steady_clock::now();
+    populateCommandTimings(command, result, started_at);
+    recordCommandTimings(performance_monitor_, result);
+    pushResult(std::move(result));
+    return false;
+  }
+
   const TaskExecutionResult task_result =
     franka_->startNamedTask(command.parameter);
 
@@ -861,6 +875,16 @@ void OpcuaWorker::monitorActiveTask()
     return;
   }
 
+  constexpr auto kExecutionTimeout = std::chrono::seconds(60);
+  if (std::chrono::steady_clock::now() - active_task_->started_at >= kExecutionTimeout) {
+    const bool stopped = franka_->stop();
+    completeActiveTask(
+      FrankaCommandStatus::Timeout,
+      stopped ? "Timed out waiting for complex task completion; stop requested" :
+      "Timed out waiting for complex task completion; stop failed");
+    return;
+  }
+
   auto status = franka_->readStatus();
 
   // Non siamo riusciti a leggere lo stato: non possiamo sapere
@@ -875,16 +899,11 @@ void OpcuaWorker::monitorActiveTask()
     return;
   }
 
-  // Il robot segnala un errore: manteniamo la task attiva perché
-  // non sappiamo ancora se il movimento sia effettivamente terminato.
   if (status->has_error) {
-    RCLCPP_ERROR_THROTTLE(
-      workerLogger(),
-      *rclcpp::Clock::make_shared(),
-      5000,
-      "Robot error while monitoring active task: %s",
-      status->error_message.c_str());
-
+    completeActiveTask(
+      FrankaCommandStatus::Failed,
+      status->error_message.empty() ? "Robot reported an error during complex task" :
+      status->error_message);
     return;
   }
 
@@ -923,12 +942,11 @@ void OpcuaWorker::monitorActiveTask()
   // Il robot non è in esecuzione.
   // Possiamo dichiarare completata la task soltanto se prima
   // abbiamo effettivamente osservato la sua esecuzione.
-  if (active_task_->execution_observed &&
-    active_task_->phase == TaskPhase::Monitoring) {
+  if (active_task_->execution_observed) {
     completeActiveTask(
-    FrankaCommandStatus::Completed,
-    "Task completed successfully");
-}
+      FrankaCommandStatus::Completed,
+      "Task completed successfully");
+  }
 }
 
 
@@ -960,6 +978,13 @@ void OpcuaWorker::completeActiveTask(
     static_cast<int>(status),
     message.c_str());
 
+  {
+    std::lock_guard<std::mutex> lock(decision_mutex_);
+    decision_queue_ = std::queue<FrankaDecisionRequest>{};
+    outstanding_decision_.reset();
+    pending_decision_.reset();
+  }
+
   active_task_.reset();
 
   pushResult(std::move(result));
@@ -976,7 +1001,7 @@ std::optional<FrankaDecisionRequest> OpcuaWorker::tryGetDecisionRequest()
   auto request = std::move(decision_queue_.front());
   decision_queue_.pop();
 
-  return std::move(request);
+  return request;
 }
 
 
@@ -1122,13 +1147,22 @@ void OpcuaWorker::processActiveTask()
   }
 
   if (process_state != WAITING_DECISION_STATE) {
+    active_task_->decision_requested_for_checkpoint = false;
+    return;
+  }
+
+  if (active_task_->decision_requested_for_checkpoint) {
+    return;
+  }
+
+  if (!franka_->setIntegerVariable(DECISION_CODE_KEY, 0)) {
     return;
   }
 
   // 6. Preparazione della richiesta di decisione.
   FrankaDecisionRequest request;
   request.request_id = active_task_->command.command_id;
-  request.decision_id = 1;
+  request.decision_id = active_task_->next_decision_id;
   request.description = "Decisione richiesta durante l'esecuzione della task.";
   request.option_codes = {1, 2};
   request.option_labels = {
@@ -1142,6 +1176,8 @@ void OpcuaWorker::processActiveTask()
   }
 
   // 8. Attesa della risposta dell'utente.
+  ++active_task_->next_decision_id;
+  active_task_->decision_requested_for_checkpoint = true;
   active_task_->phase = TaskPhase::WaitingDecision;
 }
 

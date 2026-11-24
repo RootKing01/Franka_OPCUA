@@ -51,6 +51,17 @@ FrankaFsmNode::FrankaFsmNode()
 
       const CommandType command = pending->second;
       pending_commands_.erase(pending);
+      if (command == CommandType::ExecuteComplexTask) {
+        std::queue<franka_interfaces::msg::DecisionRequest> remaining_decisions;
+        while (!pending_decisions_.empty()) {
+          auto request = std::move(pending_decisions_.front());
+          pending_decisions_.pop();
+          if (request.request_id != msg->request_id) {
+            remaining_decisions.push(std::move(request));
+          }
+        }
+        pending_decisions_ = std::move(remaining_decisions);
+      }
 
       switch (msg->status) {
         case franka_interfaces::msg::BridgeResult::STATUS_COMPLETED:
@@ -124,6 +135,16 @@ FrankaFsmNode::FrankaFsmNode()
     [this](franka_interfaces::msg::DecisionRequest::ConstSharedPtr msg) {
       {
         std::lock_guard<std::mutex> lock(state_mutex_);
+        const auto command = pending_commands_.find(msg->request_id);
+        if (command == pending_commands_.end() ||
+          command->second != CommandType::ExecuteComplexTask)
+        {
+          RCLCPP_DEBUG(
+            get_logger(),
+            "Richiesta decisione obsoleta ignorata: request_id=%lu",
+            static_cast<unsigned long>(msg->request_id));
+          return;
+        }
         pending_decisions_.push(*msg);
       }
       state_condition_.notify_all();
@@ -192,12 +213,9 @@ void FrankaFsmNode::runInteractiveMenu()
 
     switch (request->command) {
       case CommandType::Stop:
-        const auto request_id = sendCommand(
+        sendCommand(
           request->command, request->task_name, request->parameter,
           request->single_operation_pose, request->pose);
-        if (request->command == CommandType::ExecuteComplexTask && request_id) {
-          waitForComplexTask(*request_id);
-        }
         continue;
       default:
         if (checkFullQueue()) {
@@ -205,9 +223,12 @@ void FrankaFsmNode::runInteractiveMenu()
           continue;
         }
 
-        sendCommand(
+        const auto request_id = sendCommand(
           request->command, request->task_name, request->parameter,
           request->single_operation_pose, request->pose);
+        if (request->command == CommandType::ExecuteComplexTask && request_id) {
+          waitForComplexTask(*request_id);
+        }
         continue;
     }
 
