@@ -8,6 +8,8 @@
 #include "franka_opcua_bridge/commands/franka_command_manager.hpp"
 #include "franka_opcua_bridge/commands/franka_command_result.hpp"
 #include "franka_opcua_bridge/performance_monitor.hpp"
+#include "franka_opcua_bridge/events/franka_decision.hpp"
+#include "franka_opcua_bridge/active_task.hpp"
 
 #include <thread>
 #include <memory>
@@ -17,6 +19,9 @@
 #include <optional>
 #include <cstddef>
 #include <atomic>
+#include <chrono>
+#include <string>
+#include <vector>
 
 namespace franka_opcua_bridge
 {
@@ -31,7 +36,6 @@ enum class WorkerStatus
   Stopping
 
 };
-
 
 class OpcuaWorker
 {
@@ -55,6 +59,12 @@ public:
   std::optional<FrankaCommandResult> tryGetResult();
   void printTree(const namespaceTree & node, std::size_t depth = 0);
 
+  // Il bridge preleva le richieste di decisione generate dal worker.
+  std::optional<FrankaDecisionRequest> tryGetDecisionRequest();
+
+  // Il bridge consegna al worker la risposta ricevuta dalla FSM.
+  bool submitDecision(const FrankaDecisionResponse& response);
+
   WorkerStatus status() const;
 
 private:
@@ -74,6 +84,20 @@ private:
   bool stop_not_needed_{false};
   std::atomic_bool abort_requested_{false};
 
+  std::optional<ActiveTask> active_task_;
+
+  // Richieste di decisione in uscita verso il bridge.
+  std::queue<FrankaDecisionRequest> decision_queue_;
+
+  // Risposta ricevuta dal bridge, in attesa di essere elaborata.
+  std::optional<FrankaDecisionResponse> pending_decision_;
+
+  //rappresenta il checkpoint per il quale stiamo aspettando una risposta
+  std::optional<FrankaDecisionRequest> outstanding_decision_;
+
+  // Protegge la comunicazione tra worker e callback ROS2.
+  mutable std::mutex decision_mutex_;
+
 
   void run();
 
@@ -81,7 +105,21 @@ private:
 
   void pushResult(FrankaCommandResult result);
 
+  bool pushDecisionRequest(FrankaDecisionRequest request);
+
   std::unique_ptr<RobotStatus> robotStatus();
+
+  bool startActiveTask(const FrankaRobotCommand & command);
+
+  void monitorActiveTask();
+
+  void completeActiveTask(FrankaCommandStatus status, const std::string & message);
+
+  bool completeDecision(uint64_t request_id, uint64_t decision_id);
+
+  std::optional<FrankaDecisionResponse> takePendingDecision();
+
+  void processActiveTask();
 
 };
 

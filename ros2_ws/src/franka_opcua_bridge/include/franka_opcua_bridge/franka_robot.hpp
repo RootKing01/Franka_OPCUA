@@ -22,9 +22,6 @@ namespace franka_opcua_bridge
 
 struct FrankaRobotStatus : public RobotStatus
 {
-
-  std::string active_task_id;
-
 };
 
 class FrankaRobot : public IFranka, public IPoseStorage, public ITaskControl
@@ -52,6 +49,10 @@ public:
   TaskExecutionResult executeNamedTask(
     const std::string & task_id,
     const std::function<bool()> & should_abort = {}) override;
+
+  TaskExecutionResult startNamedTask(
+    const std::string & task_id) override;
+  
   MotionResult moveToNamedPose(
     const std::string & taskname,
     const std::string & pose_id,
@@ -80,6 +81,12 @@ public:
 
   std::optional<namespaceTree> showAddressSpaceNodes() override;
 
+  bool setIntegerVariable(const std::string & pose_id, const int32_t value) override;
+
+  bool readIntegerVariable(
+    const std::string & variable_id,
+    int32_t & out_value) override;
+
 protected:
   std::unique_ptr<IOpcUaProtocolClient> client_;
   std::chrono::milliseconds execution_timeout_;
@@ -95,8 +102,6 @@ private:
   std::vector<double> fromPoseToVector(const geometry_msgs::msg::Pose & pose);
 
   bool buildKeyPosePair(const std::string & pose_id, const std::vector<double> & value);
-
-  bool setIntegerVariable(const std::string & pose_id, const int32_t value);
 
   std::optional<geometry_msgs::msg::Pose> tryReadCartesianPose();
 

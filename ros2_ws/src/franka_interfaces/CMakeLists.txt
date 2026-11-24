@@ -8,6 +8,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
 	"msg/BridgeCommand.msg"
 	"msg/BridgeResult.msg"
+	"msg/DecisionRequest.msg"
+	"msg/DecisionResponse.msg"
 	DEPENDENCIES geometry_msgs
 )
 

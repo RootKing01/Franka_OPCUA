@@ -39,6 +39,20 @@ TEST(FakeRobotTest, TaskSucceedsIfBrakesOpen)
   EXPECT_EQ(status->active_task_name, "some_task");
 }
 
+TEST(FakeRobotTest, StartsNamedTaskAndStoresIntegerVariable)
+{
+  FakeRobot robot;
+  robot.connect();
+  robot.openBrakes();
+
+  EXPECT_EQ(robot.startNamedTask("desk_task").state, franka_opcua_bridge::TaskState::Starting);
+  int32_t value = 0;
+  EXPECT_FALSE(robot.readIntegerVariable("process_state", value));
+  EXPECT_TRUE(robot.setIntegerVariable("process_state", 2));
+  EXPECT_TRUE(robot.readIntegerVariable("process_state", value));
+  EXPECT_EQ(value, 2);
+}
+
 TEST(FakeRobotTest, ReadTorque)
 {
   FakeRobot robot;

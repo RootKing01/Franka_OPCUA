@@ -102,6 +102,20 @@ std::optional<FrankaRobotCommand> FrankaCommandManager::tryPop()
 
 }
 
+std::optional<FrankaRobotCommand> FrankaCommandManager::tryPopPriority()
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (priority_queue.empty()) {
+    return std::nullopt;
+  }
+
+  FrankaRobotCommand command = std::move(priority_queue.front());
+  priority_queue.pop();
+
+  return command;
+}
+
 std::optional<std::vector<FrankaRobotCommand>> FrankaCommandManager::enqueueStop(
   FrankaRobotCommand stop_command)
 {

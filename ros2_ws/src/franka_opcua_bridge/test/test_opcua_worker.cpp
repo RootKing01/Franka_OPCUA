@@ -77,6 +77,11 @@ public:
     return {franka_opcua_bridge::TaskState::Completed, "Task completed"};
   }
 
+  franka_opcua_bridge::TaskExecutionResult startNamedTask(const std::string &) override
+  {
+    return {franka_opcua_bridge::TaskState::Starting, "Task start request sent"};
+  }
+
   MotionResult moveToNamedPose(
     const std::string &,
     const std::string &,
@@ -125,6 +130,8 @@ public:
   geometry_msgs::msg::Pose readCartesianPose() override {return geometry_msgs::msg::Pose();}
   std::vector<double> readTorque() override {return {};}
   geometry_msgs::msg::Wrench readWrench() override {return geometry_msgs::msg::Wrench();}
+  bool readIntegerVariable(const std::string &, int32_t &) override {return false;}
+  bool setIntegerVariable(const std::string &, int32_t) override {return true;}
 
   bool waitUntilMoveEntered()
   {

@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
+#include <thread>
 
 namespace franka_opcua_bridge
 {
@@ -76,7 +78,6 @@ OpcuaWorker::~OpcuaWorker()
 
 bool OpcuaWorker::start()
 {
-
   RCLCPP_INFO(workerLogger(), "Avvio worker richiesto");
 
   if (worker_thread_.joinable()) {
@@ -109,13 +110,13 @@ bool OpcuaWorker::start()
   lock.lock();
 
   state_condition_.wait(
-    lock, [this] {
+    lock,
+    [this] {
       return worker_state_ == WorkerStatus::Ready ||
-      worker_state_ == WorkerStatus::Error ||
-      worker_state_ == WorkerStatus::Stopping ||
-      worker_state_ == WorkerStatus::Disconnected;
+             worker_state_ == WorkerStatus::Error ||
+             worker_state_ == WorkerStatus::Stopping ||
+             worker_state_ == WorkerStatus::Disconnected;
     });
-
 
   if (worker_state_ == WorkerStatus::Ready) {
     RCLCPP_INFO(workerLogger(), "Worker pronto");
@@ -124,17 +125,20 @@ bool OpcuaWorker::start()
   }
 
   if (worker_state_ == WorkerStatus::Error) {
-
     RCLCPP_ERROR(
       workerLogger(),
       "Worker non avviato: errore durante la connessione o il controllo");
-    lock.unlock();
+  }
+
+  // Non mantenere mutex_ durante join():
+  // il thread worker potrebbe averne bisogno per terminare.
+  lock.unlock();
+
+  if (worker_thread_.joinable()) {
     worker_thread_.join();
-    return false;
   }
 
   return false;
-
 }
 
 void OpcuaWorker::stop()
@@ -270,15 +274,18 @@ bool OpcuaWorker::enqueuePriority(FrankaRobotCommand command)
 }
 
 
+
 void OpcuaWorker::run()
 {
-
   RCLCPP_INFO(workerLogger(), "Connessione al robot OPC UA in corso");
 
   // Connessione al robot
   if (!franka_->connect()) {
+    
     RCLCPP_ERROR(workerLogger(), "Connessione al robot OPC UA fallita");
+
     std::unique_lock<std::mutex> lock(mutex_);
+    
     if (worker_state_ != WorkerStatus::Stopping) {
       worker_state_ = WorkerStatus::Error;
     }
@@ -296,7 +303,6 @@ void OpcuaWorker::run()
   }
 
   if (stopping) {
-
     RCLCPP_WARN(workerLogger(), "Arresto richiesto durante la connessione");
     franka_->disconnect();
 
@@ -308,7 +314,6 @@ void OpcuaWorker::run()
   }
 
   if (!franka_->requestControl(true)) {
-
     RCLCPP_ERROR(workerLogger(), "Acquisizione del control token fallita");
 
     franka_->disconnect();
@@ -325,8 +330,12 @@ void OpcuaWorker::run()
   }
 
   std::unique_lock<std::mutex> lock(mutex_);
+
   if (worker_state_ == WorkerStatus::Stopping) {
-    RCLCPP_WARN(workerLogger(), "Arresto richiesto durante l'acquisizione del control token");
+    RCLCPP_WARN(
+      workerLogger(),
+      "Arresto richiesto durante l'acquisizione del control token");
+
     lock.unlock();
 
     franka_->releaseControl();
@@ -343,49 +352,193 @@ void OpcuaWorker::run()
 
   worker_state_ = WorkerStatus::Ready;
   lock.unlock();
+
   state_condition_.notify_one();
 
-  RCLCPP_INFO(workerLogger(), "Control token acquisito: worker pronto a eseguire comandi");
+  RCLCPP_INFO(
+    workerLogger(),
+    "Control token acquisito: worker pronto a eseguire comandi");
 
+  // --------------------------------------------------
+  // Ciclo principale del worker
+  // --------------------------------------------------
 
   while (true) {
+
+    if (command_manager_.isShutdown()) {
+      RCLCPP_INFO(workerLogger(), "Shutdown della coda ricevuto");
+      break;
+    }
+
+    // ------------------------------------------------
+    // Task complessa attiva: monitoraggio e STOP
+    // ------------------------------------------------
+
+    if (active_task_) {
+
+      // Durante una task complessa preleviamo
+      // esclusivamente i comandi prioritari.
+      auto command = command_manager_.tryPopPriority();
+
+      if (command) {
+
+        const auto execution_started_at = std::chrono::steady_clock::now();
+
+        if (command->type == FrankaCommandType::Stop) {
+
+          RCLCPP_INFO(
+            workerLogger(),
+            "STOP ricevuto durante la task %s",
+            active_task_->command.parameter.c_str());
+
+          auto result = executeCommand(*command);
+
+          populateCommandTimings(
+            *command, result, execution_started_at);
+
+          recordCommandTimings(performance_monitor_, result);
+
+          const bool stop_success =
+            result.status == FrankaCommandStatus::Completed;
+
+          pushResult(std::move(result));
+
+          if (stop_success && active_task_) {
+            completeActiveTask(
+              FrankaCommandStatus::Cancelled,
+              "Task cancelled by STOP");
+          }
+
+        } else {
+
+          FrankaCommandResult result;
+          result.command_id = command->command_id;
+          result.status = FrankaCommandStatus::Rejected;
+          result.message =
+            "Only STOP is allowed while a task is running";
+          result.finished_at = std::chrono::steady_clock::now();
+
+          populateCommandTimings(
+            *command, result, execution_started_at);
+
+          recordCommandTimings(performance_monitor_, result);
+          pushResult(std::move(result));
+        }
+
+      } else {
+        // Nessun comando prioritario: monitoriamo la task.
+        processActiveTask();
+      }
+
+      std::this_thread::sleep_for(
+        std::chrono::milliseconds(100));
+
+      continue;
+    }
+
+    // ------------------------------------------------
+    // Nessuna task complessa attiva
+    // ------------------------------------------------
+
     auto command = command_manager_.waitAndPop();
 
     if (!command) {
       RCLCPP_INFO(workerLogger(), "Shutdown della coda ricevuto");
-      break;       //shutdown
+      break;
     }
 
     const auto execution_started_at = std::chrono::steady_clock::now();
 
     RCLCPP_INFO(
-      workerLogger(), "Esecuzione comando %lu, tipo %d, parametro '%s'",
+      workerLogger(),
+      "Esecuzione comando %lu, tipo %d, parametro '%s'",
       static_cast<unsigned long>(command->command_id),
       static_cast<int>(command->type),
       command->parameter.c_str());
 
+    
+    // Le task complesse vengono avviate in modalità asincrona.
+    // Il worker continuerà a monitorarle nelle iterazioni successive.
+    if (command->type == FrankaCommandType::ExecuteComplexTask) {
+        startActiveTask(*command);
+        continue;
+      }
+
+    // Gli altri comandi mantengono il comportamento precedente.
+    // ExecuteNamedTask resta bloccante.
+
     auto result = executeCommand(*command);
-    populateCommandTimings(*command, result, execution_started_at);
+
+    populateCommandTimings(
+      *command, result, execution_started_at);
+
     recordCommandTimings(performance_monitor_, result);
+
     RCLCPP_INFO(
-      workerLogger(), "Comando %lu terminato con stato %d: %s",
+      workerLogger(),
+      "Comando %lu terminato con stato %d: %s",
       static_cast<unsigned long>(result.command_id),
       static_cast<int>(result.status),
       result.message.c_str());
+
     pushResult(std::move(result));
   }
 
-  RCLCPP_INFO(workerLogger(), "Rilascio control token e disconnessione dal robot");
+  // --------------------------------------------------
+  // Shutdown
+  // --------------------------------------------------
 
-  auto robotStat = robotStatus();
+  RCLCPP_INFO(
+    workerLogger(),
+    "Rilascio control token e disconnessione dal robot");
 
-  // A failed status read is unknown, not proof that the robot is idle; try to stop conservatively.
-  if (robotStat == nullptr || robotStat->is_running || robotStat->has_error) {
-    bool success = franka_->stop();
-    if (success) {
-      RCLCPP_INFO(workerLogger(), "Task robot arrestato durante lo shutdown");
+  bool stop_attempted = false;
+
+  if (active_task_) {
+
+    auto robotStat = robotStatus();
+
+    if (robotStat &&
+        !robotStat->has_error &&
+        !robotStat->is_running &&
+        active_task_->execution_observed)
+    {
+      completeActiveTask(
+        FrankaCommandStatus::Completed,
+        "Task completed before worker shutdown");
     } else {
-      RCLCPP_ERROR(workerLogger(), "Impossibile arrestare il task robot durante lo shutdown");
+
+      const bool success = franka_->stop();
+      stop_attempted = true;
+
+      completeActiveTask(
+        success ? FrankaCommandStatus::Cancelled :
+                  FrankaCommandStatus::Failed,
+        success ? "Task cancelled during worker shutdown" :
+                  "Failed to stop task during worker shutdown");
+    }
+  }
+
+  if (!stop_attempted) {
+
+    auto robotStat = robotStatus();
+
+    // Una lettura fallita non dimostra che il robot sia idle.
+    if (robotStat == nullptr ||
+        robotStat->is_running ||
+        robotStat->has_error)
+    {
+      const bool success = franka_->stop();
+
+      if (success) {
+        RCLCPP_INFO(
+          workerLogger(),
+          "Task robot arrestato durante lo shutdown");
+      } else {
+        RCLCPP_ERROR(
+          workerLogger(),
+          "Impossibile arrestare il task robot durante lo shutdown");
+      }
     }
   }
 
@@ -399,6 +552,7 @@ void OpcuaWorker::run()
   state_condition_.notify_all();
   result_condition_.notify_all();
 }
+
 
 
 FrankaCommandResult OpcuaWorker::executeCommand(const FrankaRobotCommand & command)
@@ -657,6 +811,340 @@ std::unique_ptr<RobotStatus> OpcuaWorker::robotStatus()
 
 }
 
+bool OpcuaWorker::startActiveTask(const FrankaRobotCommand & command)
+{
+  if (active_task_.has_value()) {
+    RCLCPP_WARN(workerLogger(), "Impossibile avviare una nuova task: una task e' gia' attiva");
+    return false;
+  }
+
+  const auto started_at = std::chrono::steady_clock::now();
+
+  const TaskExecutionResult task_result =
+    franka_->startNamedTask(command.parameter);
+
+  if (task_result.state != TaskState::Starting) {
+    FrankaCommandResult result;
+    result.command_id = command.command_id;
+    result.status = FrankaCommandStatus::Failed;
+    result.message = task_result.message;
+    result.finished_at = std::chrono::steady_clock::now();
+
+    populateCommandTimings(command, result, started_at);
+    recordCommandTimings(performance_monitor_, result);
+    pushResult(std::move(result));
+
+    return false;
+  }
+
+  ActiveTask task;
+  task.command = command;
+  task.state = TaskState::Starting;
+  task.phase = TaskPhase::Monitoring;
+  task.started_at = started_at;
+  task.execution_observed = false;
+
+  active_task_ = std::move(task);
+
+  RCLCPP_INFO(
+    workerLogger(),
+    "Task %s avviata, command_id=%lu",
+    command.parameter.c_str(),
+    static_cast<unsigned long>(command.command_id));
+
+  return true;
+}
+
+void OpcuaWorker::monitorActiveTask()
+{
+  if (!active_task_) {
+    return;
+  }
+
+  auto status = franka_->readStatus();
+
+  // Non siamo riusciti a leggere lo stato: non possiamo sapere
+  // se il robot sia ancora occupato.
+  if (!status) {
+    RCLCPP_WARN_THROTTLE(
+      workerLogger(),
+      *rclcpp::Clock::make_shared(),
+      5000,
+      "Unable to read robot status while monitoring active task");
+
+    return;
+  }
+
+  // Il robot segnala un errore: manteniamo la task attiva perché
+  // non sappiamo ancora se il movimento sia effettivamente terminato.
+  if (status->has_error) {
+    RCLCPP_ERROR_THROTTLE(
+      workerLogger(),
+      *rclcpp::Clock::make_shared(),
+      5000,
+      "Robot error while monitoring active task: %s",
+      status->error_message.c_str());
+
+    return;
+  }
+
+  const std::string & expected_task_id = active_task_->command.parameter;
+
+  // Il robot è in esecuzione.
+  if (status->is_running) {
+
+    // L'ID potrebbe non essere ancora disponibile durante
+    // la fase iniziale di avvio.
+    if (status->active_task_id.empty()) {
+      return;
+    }
+
+    // Non è la task che abbiamo richiesto.
+    // Non possiamo considerare conclusa la nostra task né
+    // permettere al worker di avviare altri comandi.
+    if (status->active_task_id != expected_task_id) {
+      RCLCPP_ERROR_THROTTLE(
+        workerLogger(),
+        *rclcpp::Clock::make_shared(),
+        5000,
+        "Unexpected active task. Expected '%s', found '%s'",
+        expected_task_id.c_str(),
+        status->active_task_id.c_str());
+
+      return;
+    }
+
+    active_task_->execution_observed = true;
+    active_task_->state = TaskState::Running;
+
+    return;
+  }
+
+  // Il robot non è in esecuzione.
+  // Possiamo dichiarare completata la task soltanto se prima
+  // abbiamo effettivamente osservato la sua esecuzione.
+  if (active_task_->execution_observed &&
+    active_task_->phase == TaskPhase::Monitoring) {
+    completeActiveTask(
+    FrankaCommandStatus::Completed,
+    "Task completed successfully");
+}
+}
+
+
+void OpcuaWorker::completeActiveTask(
+  FrankaCommandStatus status,
+  const std::string & message)
+{
+  if (!active_task_) {
+    return;
+  }
+
+  FrankaCommandResult result;
+  result.command_id = active_task_->command.command_id;
+  result.status = status;
+  result.message = message;
+  result.finished_at = std::chrono::steady_clock::now();
+
+  populateCommandTimings(
+    active_task_->command,
+    result,
+    active_task_->started_at);
+
+  recordCommandTimings(performance_monitor_, result);
+
+  RCLCPP_INFO(
+    workerLogger(),
+    "Task %s terminata con stato %d: %s",
+    active_task_->command.parameter.c_str(),
+    static_cast<int>(status),
+    message.c_str());
+
+  active_task_.reset();
+
+  pushResult(std::move(result));
+}
+
+std::optional<FrankaDecisionRequest> OpcuaWorker::tryGetDecisionRequest()
+{
+  std::lock_guard<std::mutex> lock(decision_mutex_);
+
+  if (decision_queue_.empty()) {
+    return std::nullopt;
+  }
+
+  auto request = std::move(decision_queue_.front());
+  decision_queue_.pop();
+
+  return std::move(request);
+}
+
+
+bool OpcuaWorker::submitDecision(const FrankaDecisionResponse& response)
+{
+  std::lock_guard<std::mutex> lock(decision_mutex_);
+
+  // Deve esserci una richiesta in attesa di risposta.
+  if (!outstanding_decision_) {
+    return false;
+  }
+
+  // La risposta deve riferirsi alla richiesta corretta.
+  if (response.request_id != outstanding_decision_->request_id ||
+      response.decision_id != outstanding_decision_->decision_id) {
+    return false;
+  }
+
+  // Il codice scelto deve essere tra quelli proposti.
+  const auto& options = outstanding_decision_->option_codes;
+
+  if (std::find(options.begin(), options.end(), response.decision_code) ==
+      options.end()) {
+    return false;
+  }
+
+  // Non accettiamo una seconda risposta prima di aver gestito la prima.
+  if (pending_decision_) {
+    return false;
+  }
+
+  pending_decision_ = response;
+  return true;
+}
+
+bool OpcuaWorker::pushDecisionRequest(FrankaDecisionRequest request)
+{
+  std::lock_guard<std::mutex> lock(decision_mutex_);
+
+  // Non permettiamo più di una richiesta in attesa.
+  if (outstanding_decision_) {
+    return false;
+  }
+
+  outstanding_decision_ = request;
+  decision_queue_.push(std::move(request));
+
+  return true;
+}
+
+std::optional<FrankaDecisionResponse> OpcuaWorker::takePendingDecision()
+{
+  std::lock_guard<std::mutex> lock(decision_mutex_);
+
+  return pending_decision_;
+}
+
+bool OpcuaWorker::completeDecision(
+  uint64_t request_id,
+  uint64_t decision_id)
+{
+  std::lock_guard<std::mutex> lock(decision_mutex_);
+
+  if (!outstanding_decision_) {
+    return false;
+  }
+
+  if (outstanding_decision_->request_id != request_id ||
+      outstanding_decision_->decision_id != decision_id) {
+    return false;
+  }
+
+  outstanding_decision_.reset();
+  pending_decision_.reset();
+
+  return true;
+}
+
+
+void OpcuaWorker::processActiveTask()
+{
+  if (!active_task_) {
+    return;
+  }
+
+  constexpr char PROCESS_STATE_KEY[] = "process_state";
+  constexpr char DECISION_CODE_KEY[] = "decision_code";
+
+  constexpr int32_t WAITING_DECISION_STATE = 1;
+
+  // 1. Monitoraggio dell'esecuzione della task.
+  monitorActiveTask();
+
+  if (!active_task_) {
+    return;
+  }
+
+  // 2. Gestione di una risposta già ricevuta.
+  if (active_task_->phase == TaskPhase::WaitingDecision) {
+    auto response = takePendingDecision();
+
+    if (!response) {
+      return;
+    }
+
+    active_task_->phase = TaskPhase::ApplyingDecision;
+  }
+
+  // 3. Applicazione della decisione sul server OPC UA.
+  if (active_task_->phase == TaskPhase::ApplyingDecision) {
+    auto response = takePendingDecision();
+
+    if (!response) {
+      return;
+    }
+
+    if (!franka_->setIntegerVariable(
+        DECISION_CODE_KEY,
+        response->decision_code)) {
+      return;
+    }
+
+    if (!completeDecision(
+        response->request_id,
+        response->decision_id)) {
+      return;
+    }
+
+    active_task_->phase = TaskPhase::Monitoring;
+    return;
+  }
+
+  // 4. Se non siamo in fase di monitoraggio, non procediamo.
+  if (active_task_->phase != TaskPhase::Monitoring) {
+    return;
+  }
+
+  // 5. Lettura dello stato del processo.
+  int32_t process_state = 0;
+
+  if (!franka_->readIntegerVariable(PROCESS_STATE_KEY, process_state)) {
+    return;
+  }
+
+  if (process_state != WAITING_DECISION_STATE) {
+    return;
+  }
+
+  // 6. Preparazione della richiesta di decisione.
+  FrankaDecisionRequest request;
+  request.request_id = active_task_->command.command_id;
+  request.decision_id = 1;
+  request.description = "Decisione richiesta durante l'esecuzione della task.";
+  request.option_codes = {1, 2};
+  request.option_labels = {
+    "Opzione A",
+    "Opzione B"
+  };
+
+  // 7. Inserimento della richiesta nella coda.
+  if (!pushDecisionRequest(std::move(request))) {
+    return;
+  }
+
+  // 8. Attesa della risposta dell'utente.
+  active_task_->phase = TaskPhase::WaitingDecision;
+}
+
 void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)
 {
   std::cout << std::string(depth * 2, ' ')
@@ -666,6 +1154,9 @@ void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)
     printTree(child, depth + 1);
   }
 }
+
+
+
 
 
 }

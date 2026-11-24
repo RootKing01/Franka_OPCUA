@@ -5,13 +5,14 @@
 #include "franka_interfaces/msg/bridge_command.hpp"
 #include "franka_interfaces/msg/bridge_result.hpp"
 #include "franka_opcua_bridge/performance_monitor.hpp"
+#include "franka_opcua_bridge/opcua_worker.hpp"
+#include "franka_interfaces/msg/decision_request.hpp"
+#include "franka_interfaces/msg/decision_response.hpp"
 
 #include <chrono>
 #include <memory>
 #include <cstdint>
 #include <string>
-
-#include "franka_opcua_bridge/opcua_worker.hpp"
 
 namespace franka_opcua_bridge
 {
@@ -28,12 +29,17 @@ private:
 
   rclcpp::Publisher<franka_interfaces::msg::BridgeResult>::SharedPtr result_publisher_;
 
+  rclcpp::Publisher<franka_interfaces::msg::DecisionRequest>::SharedPtr decision_request_;
+
+  rclcpp::Subscription<franka_interfaces::msg::DecisionResponse>::SharedPtr decision_response_;
+
   rclcpp::TimerBase::SharedPtr result_timer_;
 
   std::shared_ptr<PerformanceMonitor> performance_monitor_;
   std::chrono::steady_clock::time_point last_performance_report_{};
   std::unique_ptr<OpcuaWorker> worker_;
 
+  void publishPendingDecisions();
   void publishPendingResults();
   void publishRejected(
     std::uint64_t request_id,
@@ -42,6 +48,10 @@ private:
 
   void commandCallback(
     const franka_interfaces::msg::BridgeCommand::SharedPtr msg);
+
+  void decisionResponseCallback(
+    const franka_interfaces::msg::DecisionResponse::SharedPtr msg);
+    
 };
 
 }  // namespace franka_opcua_bridge

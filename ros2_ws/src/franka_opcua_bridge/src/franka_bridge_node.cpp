@@ -112,9 +112,26 @@ FrankaBridgeNode::FrankaBridgeNode(const std::string & robot_id)
     "Risultati in scrittura sul topic '%s'",
     result_topic.c_str());
 
+  // Topic invio decisioni
+  const std::string decision_request_topic = "/franka_" + robot_id + "/decision_request";
+
+  decision_request_ = this->create_publisher<franka_interfaces::msg::DecisionRequest>(decision_request_topic, 10);
+
+   // Topic invio decisioni
+  const std::string decision_response_topic = "/franka_" + robot_id + "/decision_response";
+
+  decision_response_ =  this->create_subscription<franka_interfaces::msg::DecisionResponse>(
+    decision_response_topic,
+    10,
+    std::bind(
+      &FrankaBridgeNode::decisionResponseCallback,
+      this,
+      std::placeholders::_1));
+
   result_timer_ = this->create_wall_timer(
     std::chrono::milliseconds(50),
-    [this]() {publishPendingResults();});
+    [this]() {publishPendingResults();
+              publishPendingDecisions();});
 
 
 }
@@ -183,6 +200,42 @@ void FrankaBridgeNode::publishRejected(
     static_cast<unsigned long>(request_id), reason.c_str());
 }
 
+void FrankaBridgeNode::publishPendingDecisions()
+{
+
+  while (auto request = worker_->tryGetDecisionRequest())
+  {
+    franka_interfaces::msg::DecisionRequest msg;
+
+    msg.request_id = request->request_id;
+    msg.decision_id = request->decision_id;
+    msg.description = request->description;
+    msg.option_codes = request->option_codes;
+    msg.option_labels = request->option_labels;
+    msg.parameter_names = request->parameter_names;
+    msg.parameter_values = request->parameter_values;
+
+    decision_request_->publish(msg);
+
+  }
+}
+
+void FrankaBridgeNode::decisionResponseCallback(
+  const franka_interfaces::msg::DecisionResponse::SharedPtr msg)
+{
+  FrankaDecisionResponse response;
+  response.request_id = msg->request_id;
+  response.decision_id = msg->decision_id;
+  response.decision_code = msg->decision_code;
+
+  if (!worker_->submitDecision(response)) {
+    RCLCPP_WARN(
+      get_logger(),
+      "Impossibile accettare la decisione: request_id=%lu decision_id=%lu",
+      static_cast<unsigned long>(msg->request_id),
+      static_cast<unsigned long>(msg->decision_id));
+  }
+}
 
 void FrankaBridgeNode::commandCallback(
   const franka_interfaces::msg::BridgeCommand::SharedPtr msg)
@@ -230,6 +283,18 @@ void FrankaBridgeNode::commandCallback(
       command_type = FrankaCommandType::ExecuteNamedTask;
       parameter = msg->parameter;
       break;
+
+    case franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_COMPLEX_TASK:
+      if (msg->parameter.empty()) {
+        publishRejected(
+        msg->request_id,
+        "Task ID is required",
+        received_at);
+        return;
+      }
+    command_type = FrankaCommandType::ExecuteComplexTask;
+    parameter = msg->parameter;
+    break;
     case franka_interfaces::msg::BridgeCommand::COMMAND_STOP:
       command_type = FrankaCommandType::Stop;
       priority = true;
@@ -312,6 +377,7 @@ FrankaBridgeNode::~FrankaBridgeNode()
     result_timer_.reset();
     worker_->stop();
     publishPendingResults();
+    publishPendingDecisions();
   }
 }
 

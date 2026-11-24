@@ -4,11 +4,15 @@
 #include "rclcpp/rclcpp.hpp"
 #include "franka_interfaces/msg/bridge_command.hpp"
 #include "franka_interfaces/msg/bridge_result.hpp"
+#include "franka_interfaces/msg/decision_request.hpp"
+#include "franka_interfaces/msg/decision_response.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 
 #include <cstdint>
+#include <condition_variable>
 #include <mutex>
 #include <optional>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -29,6 +33,11 @@ public:
 private:
   rclcpp::Publisher<franka_interfaces::msg::BridgeCommand>::SharedPtr command_publisher_;
   rclcpp::Subscription<franka_interfaces::msg::BridgeResult>::SharedPtr result_subscription_;
+
+  rclcpp::Publisher<franka_interfaces::msg::DecisionResponse>::SharedPtr decision_response_;
+  rclcpp::Subscription<franka_interfaces::msg::DecisionRequest>::SharedPtr decision_request_;
+  std::queue<franka_interfaces::msg::DecisionRequest> pending_decisions_;
+  std::condition_variable state_condition_;
   std::uint64_t next_request_id_{1};
   std::vector<std::string> available_task_ids_;
   std::mutex state_mutex_;
@@ -47,7 +56,8 @@ private:
     ShowAddressSpaceNodes,
     MoveToNamedPose,
     SaveCurrentPose,
-    SaveExplicitPose
+    SaveExplicitPose,
+    ExecuteComplexTask
   };
 
   struct CommandRequest
@@ -103,6 +113,8 @@ private:
   void showCommandMenu(bool task_active) const;
   std::optional<CommandRequest> readCommandRequest(bool task_active);
   bool checkFullQueue();
+  bool answerPendingDecision();
+  void waitForComplexTask(std::uint64_t request_id);
 
 
 };

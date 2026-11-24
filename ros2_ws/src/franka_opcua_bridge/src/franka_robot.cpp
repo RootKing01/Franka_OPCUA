@@ -190,6 +190,59 @@ TaskExecutionResult FrankaRobot::executeNamedTask(
 }
 
 
+TaskExecutionResult FrankaRobot::startNamedTask(const std::string & task_id)
+{
+    if (task_id.empty()) {
+        return {
+            TaskState::Failed,
+            "Task ID cannot be empty"
+        };
+    }
+
+    auto status = readStatus();
+
+    if (!status) {
+        return {
+            TaskState::Failed,
+            "Unable to read robot execution status"
+        };
+    }
+
+    if (status->has_error) {
+        return {
+            TaskState::Failed,
+            status->error_message
+        };
+    }
+
+    if (status->is_running) {
+        return {
+            TaskState::Failed,
+            "Another task is already running"
+        };
+    }
+
+    CallResult result = client_->callMethod(
+        kExecutionControlPath,
+        "StartTask",
+        {Value(task_id)}
+    );
+
+    if (!result.ok) {
+      return {
+          TaskState::Failed,
+          result.error_message.empty()
+              ? "Failed to start task"
+              : result.error_message
+        };
+    }
+
+    return {
+        TaskState::Starting,
+        "Task start request sent"
+    };
+}
+
 std::unique_ptr<RobotStatus> FrankaRobot::readStatus()
 {
   auto robotStatus = std::make_unique<FrankaRobotStatus>();
@@ -486,6 +539,36 @@ bool FrankaRobot::setIntegerVariable(const std::string & variable_id, int32_t va
 
 }
 
+bool FrankaRobot::readIntegerVariable(
+  const std::string & variable_id,
+  int32_t & out_value)
+{
+  std::vector<std::string> pathKeyInt = kPoseMapPath;
+  pathKeyInt.push_back("KeyIntMap");
+
+  std::vector<Value> args;
+  args.emplace_back(variable_id);
+
+  CallResult result = client_->callMethod(
+    pathKeyInt, "Read", args);
+
+  if (!result.ok || result.output_values.empty()) {
+    return false;
+  }
+
+  if (!result.output_values[0].is<KeyIntPairValue>()) {
+    return false;
+  }
+
+  const auto & pair = result.output_values[0].as<KeyIntPairValue>();
+
+  if (pair.key != variable_id) {
+    return false;
+  }
+
+  out_value = pair.value;
+  return true;
+}
 
 bool FrankaRobot::savePose(const std::string & pose_id, const geometry_msgs::msg::Pose & pose)
 {
@@ -601,6 +684,9 @@ std::optional<namespaceTree> FrankaRobot::showAddressSpaceNodes()
   return client_->exploreAddressSpace();
 
 }
+
+
+ 
 
 
 }

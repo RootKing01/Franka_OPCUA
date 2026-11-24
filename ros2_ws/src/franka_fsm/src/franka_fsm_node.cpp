@@ -1,8 +1,11 @@
 #include "franka_fsm/franka_fsm_node.hpp"
 
 #include <array>
+#include <algorithm>
 #include <iostream>
+#include <poll.h>
 #include <sstream>
+#include <unistd.h>
 
 namespace franka_fsm
 {
@@ -61,7 +64,9 @@ FrankaFsmNode::FrankaFsmNode()
               RCLCPP_INFO(get_logger(), "Task disponibile: %s", task_id.c_str());
             }
           }
-          if (command == CommandType::ExecuteTask) {
+          if (command == CommandType::ExecuteTask ||
+            command == CommandType::ExecuteComplexTask)
+          {
             task_active_ = false;
             state_ = FsmState::Completed;
             RCLCPP_INFO(
@@ -94,6 +99,7 @@ FrankaFsmNode::FrankaFsmNode()
         case franka_interfaces::msg::BridgeResult::STATUS_UNKNOWN:
         default:
           if (command == CommandType::ExecuteTask ||
+          command == CommandType::ExecuteComplexTask ||
           command == CommandType::MoveToNamedPose)
           {
             task_active_ = false;
@@ -106,6 +112,27 @@ FrankaFsmNode::FrankaFsmNode()
         get_logger(),
         "Stato FSM aggiornato: %u",
         static_cast<unsigned int>(state_));
+      state_condition_.notify_all();
+    });
+
+  decision_response_ = create_publisher<franka_interfaces::msg::DecisionResponse>(
+    "/franka_right/decision_response", 10);
+
+  decision_request_ = create_subscription<franka_interfaces::msg::DecisionRequest>(
+    "/franka_right/decision_request",
+    10,
+    [this](franka_interfaces::msg::DecisionRequest::ConstSharedPtr msg) {
+      {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        pending_decisions_.push(*msg);
+      }
+      state_condition_.notify_all();
+      RCLCPP_INFO(
+        get_logger(),
+        "Decisione richiesta: request_id=%lu decision_id=%lu: %s",
+        static_cast<unsigned long>(msg->request_id),
+        static_cast<unsigned long>(msg->decision_id),
+        msg->description.c_str());
     });
 }
 
@@ -128,6 +155,11 @@ void FrankaFsmNode::runInteractiveMenu()
 
     if (choice == "1") {
       showAvailableCommands();
+      continue;
+    }
+
+    if (choice == "4") {
+      answerPendingDecision();
       continue;
     }
 
@@ -160,9 +192,12 @@ void FrankaFsmNode::runInteractiveMenu()
 
     switch (request->command) {
       case CommandType::Stop:
-        sendCommand(
+        const auto request_id = sendCommand(
           request->command, request->task_name, request->parameter,
           request->single_operation_pose, request->pose);
+        if (request->command == CommandType::ExecuteComplexTask && request_id) {
+          waitForComplexTask(*request_id);
+        }
         continue;
       default:
         if (checkFullQueue()) {
@@ -199,7 +234,8 @@ void FrankaFsmNode::showMainMenu(bool task_active) const
   std::cout << "\n=== Franka FSM ===\n"
             << "1. Mostra comandi\n"
             << "2. Invia comando\n"
-            << "3. Termina\n";
+            << "3. Termina\n"
+            << "4. Rispondi a una decisione\n";
 
 
   if (task_active) {
@@ -224,7 +260,8 @@ void FrankaFsmNode::showAvailableCommands() const
             << " 9. Mostra address space\n"
             << "10. Muovi a posa nominata\n"
             << "11. Salva posa corrente\n"
-            << "12. Salva posa esplicita\n";
+            << "12. Salva posa esplicita\n"
+            << "13. Avvia task complessa\n";
 }
 
 
@@ -244,6 +281,7 @@ void FrankaFsmNode::showCommandMenu(bool task_active) const
             << "10. Muovi a posa nominata\n"
             << "11. Salva posa corrente\n"
             << "12. Salva posa esplicita\n"
+            << "13. Avvia task complessa\n"
             << " 0. Indietro\n> " << std::flush;
 }
 
@@ -358,12 +396,137 @@ std::optional<FrankaFsmNode::CommandRequest> FrankaFsmNode::readCommandRequest(
     explicit_pose.orientation.z = values[5];
     explicit_pose.orientation.w = values[6];
     request.pose = explicit_pose;
+  
+  }else if (choice == "13") {
+    request.command = CommandType::ExecuteComplexTask;
+    std::cout << "ID task complessa: " << std::flush;
+    if (!std::getline(std::cin, request.parameter)) {
+      return std::nullopt;
+    }
   } else {
     std::cout << "Comando non valido.\n";
     return std::nullopt;
   }
 
   return request;
+}
+
+bool FrankaFsmNode::answerPendingDecision()
+{
+  franka_interfaces::msg::DecisionRequest request;
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (pending_decisions_.empty()) {
+      std::cout << "Nessuna decisione in attesa.\n";
+      return false;
+    }
+    request = pending_decisions_.front();
+  }
+
+  std::cout << request.description << "\n";
+  for (std::size_t index = 0; index < request.option_codes.size(); ++index) {
+    std::cout << "  " << request.option_codes[index];
+    if (index < request.option_labels.size()) {
+      std::cout << ". " << request.option_labels[index];
+    }
+    std::cout << '\n';
+  }
+
+  std::string input;
+  int32_t decision_code = 0;
+  while (true) {
+    std::cout << "Codice decisione: " << std::flush;
+    if (!std::getline(std::cin, input)) {
+      return false;
+    }
+    std::istringstream input_stream(input);
+    std::string extra_value;
+    if (input == "s" || input == "S") {
+      {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        if (!pending_decisions_.empty() &&
+          pending_decisions_.front().request_id == request.request_id &&
+          pending_decisions_.front().decision_id == request.decision_id)
+        {
+          pending_decisions_.pop();
+        }
+      }
+      sendCommand(CommandType::Stop);
+      std::cout << "STOP inviato.\n";
+      return true;
+    }
+    if (input_stream >> decision_code && !(input_stream >> extra_value) &&
+      std::find(request.option_codes.begin(), request.option_codes.end(), decision_code) !=
+      request.option_codes.end())
+    {
+      break;
+    }
+    std::cout << "Codice non valido. Scegli uno dei codici mostrati.\n";
+  }
+
+  franka_interfaces::msg::DecisionResponse response;
+  response.request_id = request.request_id;
+  response.decision_id = request.decision_id;
+  response.decision_code = decision_code;
+  decision_response_->publish(response);
+
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (!pending_decisions_.empty() &&
+      pending_decisions_.front().request_id == request.request_id &&
+      pending_decisions_.front().decision_id == request.decision_id)
+    {
+      pending_decisions_.pop();
+    }
+  }
+  std::cout << "Decisione inviata.\n";
+  return false;
+}
+
+void FrankaFsmNode::waitForComplexTask(std::uint64_t request_id)
+{
+  std::cout << "Task complessa in esecuzione. Inserisci 's' per inviare STOP.\n";
+  bool stop_sent = false;
+
+  while (rclcpp::ok()) {
+    {
+      std::unique_lock<std::mutex> lock(state_mutex_);
+      state_condition_.wait_for(
+        lock,
+        std::chrono::milliseconds(100),
+        [this, request_id]() {
+          return pending_commands_.find(request_id) == pending_commands_.end() ||
+                 !pending_decisions_.empty();
+        });
+
+      if (pending_commands_.find(request_id) == pending_commands_.end()) {
+        return;
+      }
+
+      if (!pending_decisions_.empty()) {
+        lock.unlock();
+        stop_sent = answerPendingDecision() || stop_sent;
+        continue;
+      }
+    }
+
+    if (stop_sent) {
+      continue;
+    }
+
+    pollfd input_fd{STDIN_FILENO, POLLIN, 0};
+    const int poll_result = ::poll(&input_fd, 1, 0);
+    if (poll_result > 0 && (input_fd.revents & (POLLIN | POLLHUP))) {
+      std::string input;
+      if (!std::getline(std::cin, input) || input == "s" || input == "S") {
+        sendCommand(CommandType::Stop);
+        stop_sent = true;
+        std::cout << "STOP inviato; attendo la fine della task.\n";
+      } else {
+        std::cout << "Task ancora attiva. Inserisci 's' per inviare STOP.\n";
+      }
+    }
+  }
 }
 
 std::string FrankaFsmNode::operationsPosePrint(const std::vector<std::string> & operationPose)
@@ -391,6 +554,7 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
 
   const bool requires_parameter =
     command == CommandType::ExecuteTask ||
+    command == CommandType::ExecuteComplexTask ||
     command == CommandType::MoveToNamedPose ||
     command == CommandType::SaveCurrentPose ||
     command == CommandType::SaveExplicitPose;
@@ -426,6 +590,9 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
       break;
     case CommandType::ExecuteTask:
       message.command = franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_TASK;
+      break;
+    case CommandType::ExecuteComplexTask:
+      message.command = franka_interfaces::msg::BridgeCommand::COMMAND_EXECUTE_COMPLEX_TASK;
       break;
     case CommandType::Stop:
       message.command = franka_interfaces::msg::BridgeCommand::COMMAND_STOP;
@@ -466,7 +633,10 @@ std::optional<std::uint64_t> FrankaFsmNode::sendCommand(
     std::lock_guard<std::mutex> lock(state_mutex_);
     pending_commands_[request_id] = command;
     state_ = FsmState::WaitingForResult;
-    if (command == CommandType::ExecuteTask || command == CommandType::MoveToNamedPose) {
+    if (command == CommandType::ExecuteTask ||
+      command == CommandType::ExecuteComplexTask ||
+      command == CommandType::MoveToNamedPose)
+    {
       task_active_ = true;
     }
   }

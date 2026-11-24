@@ -36,6 +36,10 @@ public:
   virtual TaskExecutionResult executeNamedTask(
     const std::string & task_id,
     const std::function<bool()> & should_abort = {}) = 0;
+
+  virtual TaskExecutionResult startNamedTask(
+    const std::string & task_id) = 0;
+    
   virtual MotionResult moveToNamedPose(
     const std::string & taskname,
     const std::string & pose_id,
@@ -47,6 +51,14 @@ public:
   virtual bool activateFCI() = 0;
   virtual bool deactivateFCI() = 0;
   virtual std::optional<namespaceTree> showAddressSpaceNodes() = 0;
+
+  virtual bool readIntegerVariable(
+    const std::string & variable_id,
+    int32_t & out_value) = 0;
+
+  virtual bool setIntegerVariable(
+    const std::string & pose_id, 
+    const int32_t value) = 0;
 
 
 };

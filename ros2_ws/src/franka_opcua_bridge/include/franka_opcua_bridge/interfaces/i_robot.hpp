@@ -17,6 +17,7 @@ struct RobotStatus
   bool is_running = false;
   std::string error_message;
   std::string active_task_name;
+  std::string active_task_id;
 };
 
 class IRobot

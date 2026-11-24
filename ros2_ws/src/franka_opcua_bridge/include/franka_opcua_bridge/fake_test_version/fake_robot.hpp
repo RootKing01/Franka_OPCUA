@@ -4,6 +4,7 @@
 #include "franka_opcua_bridge/interfaces/i_franka.hpp"
 
 #include <functional>
+#include <unordered_map>
 
 namespace franka_opcua_bridge
 {
@@ -23,6 +24,7 @@ public:
   TaskExecutionResult executeNamedTask(
     const std::string & task_id,
     const std::function<bool()> & should_abort = {}) override;
+  TaskExecutionResult startNamedTask(const std::string & task_id) override;
   MotionResult moveToNamedPose(
     const std::string & taskname,
     const std::string & pose_id,
@@ -44,12 +46,15 @@ public:
 
   std::vector<double> readTorque() override;
   geometry_msgs::msg::Wrench readWrench() override;
+  bool readIntegerVariable(const std::string & variable_id, int32_t & out_value) override;
+  bool setIntegerVariable(const std::string & variable_id, int32_t value) override;
 
 private:
   bool connected_ = false;
   bool brakes_open_ = false;
   std::string last_task_;
   std::string last_pose_;
+  std::unordered_map<std::string, int32_t> integer_variables_;
 };
 
 }  // namespace franka_opcua_bridge

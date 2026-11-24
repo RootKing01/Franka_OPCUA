@@ -23,6 +23,7 @@ public:
 
   std::optional<FrankaRobotCommand> waitAndPop();
   std::optional<FrankaRobotCommand> tryPop();
+  std::optional<FrankaRobotCommand> tryPopPriority();
 
   void shutdown();
   bool isShutdown() const;

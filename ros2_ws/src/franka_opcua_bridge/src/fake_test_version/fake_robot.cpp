@@ -36,6 +36,18 @@ TaskExecutionResult FakeRobot::executeNamedTask(
   return {TaskState::Completed, "Task completed"};
 }
 
+TaskExecutionResult FakeRobot::startNamedTask(const std::string & task_id)
+{
+  if (task_id.empty()) {
+    return {TaskState::Failed, "Task ID cannot be empty"};
+  }
+  if (!brakes_open_) {
+    return {TaskState::Failed, "Brakes are closed"};
+  }
+  last_task_ = task_id;
+  return {TaskState::Starting, "Task start request sent"};
+}
+
 MotionResult FakeRobot::moveToNamedPose(
   const std::string & task_name,
   const std::string & pose_id,
@@ -120,6 +132,22 @@ std::optional<namespaceTree> FakeRobot::showAddressSpaceNodes()
   root.nodeId = "ns=0;i=84";
   root.nodekind = NodeKind::Object;
   return root;
+}
+
+bool FakeRobot::readIntegerVariable(const std::string & variable_id, int32_t & out_value)
+{
+  const auto variable = integer_variables_.find(variable_id);
+  if (variable == integer_variables_.end()) {
+    return false;
+  }
+  out_value = variable->second;
+  return true;
+}
+
+bool FakeRobot::setIntegerVariable(const std::string & variable_id, int32_t value)
+{
+  integer_variables_[variable_id] = value;
+  return true;
 }
 
 }  // namespace franka_opcua_bridge
