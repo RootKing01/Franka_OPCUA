@@ -1186,31 +1186,44 @@ void OpcuaWorker::processActiveTask()
     return;
   }
 
-  if (!franka_->setIntegerVariable(DECISION_CODE_KEY, 0)) {
+  // 6. Lettura del peso dell'oggetto.
+  int32_t object_weight = 0;
+
+  if (!franka_->readIntegerVariable("object_weight", object_weight)) {
     return;
   }
 
-  // 6. Preparazione della richiesta di decisione.
+  // 7. Preparazione della richiesta.
   FrankaDecisionRequest request;
+
   request.request_id = active_task_->command.command_id;
   request.decision_id = active_task_->next_decision_id;
-  request.description = "Decisione richiesta durante l'esecuzione della task.";
+
+  request.description = "L'oggetto è stato identificato. Scegliere come procedere.";
+
   request.option_codes = {1, 2};
   request.option_labels = {
-    "Opzione A",
-    "Opzione B"
+    "Posa l'oggetto",
+    "Incastra l'oggetto"
   };
 
-  // 7. Inserimento della richiesta nella coda.
+  request.parameter_names = {"Peso oggetto"};
+
+  request.parameter_values = {
+    std::to_string(object_weight) + " g"
+  };
+
+  // 8. Inserimento della richiesta nella coda.
   if (!pushDecisionRequest(std::move(request))) {
     return;
   }
 
-  // 8. Attesa della risposta dell'utente.
+  // 9. Attesa della risposta.
   ++active_task_->next_decision_id;
   active_task_->decision_requested_for_checkpoint = true;
   active_task_->phase = TaskPhase::WaitingDecision;
   active_task_->decision_wait_started = std::chrono::steady_clock::now();
+
 }
 
 void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)
