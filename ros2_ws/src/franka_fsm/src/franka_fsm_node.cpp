@@ -133,28 +133,44 @@ FrankaFsmNode::FrankaFsmNode()
     "/franka_right/decision_request",
     10,
     [this](franka_interfaces::msg::DecisionRequest::ConstSharedPtr msg) {
-      {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        const auto command = pending_commands_.find(msg->request_id);
-        if (command == pending_commands_.end() ||
-          command->second != CommandType::ExecuteComplexTask)
-        {
-          RCLCPP_DEBUG(
-            get_logger(),
-            "Richiesta decisione obsoleta ignorata: request_id=%lu",
-            static_cast<unsigned long>(msg->request_id));
-          return;
-        }
-        pending_decisions_.push(*msg);
-      }
-      state_condition_.notify_all();
-      RCLCPP_INFO(
+    RCLCPP_INFO(
+    get_logger(),
+    "[FSM] DecisionRequest ricevuta: request_id=%lu decision_id=%lu",
+    static_cast<unsigned long>(msg->request_id),
+    static_cast<unsigned long>(msg->decision_id));
+
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
+    const auto command = pending_commands_.find(msg->request_id);
+
+    if (command == pending_commands_.end()) {
+      RCLCPP_WARN(
         get_logger(),
-        "Decisione richiesta: request_id=%lu decision_id=%lu: %s",
-        static_cast<unsigned long>(msg->request_id),
-        static_cast<unsigned long>(msg->decision_id),
-        msg->description.c_str());
-    });
+        "[FSM] DecisionRequest ignorata: request_id=%lu non presente tra i comandi pendenti",
+        static_cast<unsigned long>(msg->request_id));
+      return;
+    }
+
+    if (command->second != CommandType::ExecuteComplexTask) {
+      RCLCPP_WARN(
+        get_logger(),
+        "[FSM] DecisionRequest ignorata: request_id=%lu non associato a ExecuteComplexTask",
+        static_cast<unsigned long>(msg->request_id));
+      return;
+    }
+
+    pending_decisions_.push(*msg);
+
+    RCLCPP_INFO(
+      get_logger(),
+      "[FSM] DecisionRequest accodata: request_id=%lu decision_id=%lu",
+      static_cast<unsigned long>(msg->request_id),
+      static_cast<unsigned long>(msg->decision_id));
+  }
+
+  state_condition_.notify_all();
+  });
 }
 
 

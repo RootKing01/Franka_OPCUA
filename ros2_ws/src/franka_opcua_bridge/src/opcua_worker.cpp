@@ -1107,6 +1107,7 @@ bool OpcuaWorker::completeDecision(
 }
 
 
+
 void OpcuaWorker::processActiveTask()
 {
   if (!active_task_) {
@@ -1114,6 +1115,7 @@ void OpcuaWorker::processActiveTask()
   }
 
   constexpr char PROCESS_STATE_KEY[] = "process_state";
+  constexpr char OBJECT_WEIGHT_KEY[] = "object_weight";
   constexpr char DECISION_CODE_KEY[] = "decision_code";
 
   constexpr int32_t WAITING_DECISION_STATE = 1;
@@ -1122,6 +1124,7 @@ void OpcuaWorker::processActiveTask()
   monitorActiveTask();
 
   if (!active_task_) {
+    RCLCPP_INFO(workerLogger(), "[Decision] Task non più attiva.");
     return;
   }
 
@@ -1133,11 +1136,21 @@ void OpcuaWorker::processActiveTask()
       return;
     }
 
+    RCLCPP_INFO(
+      workerLogger(),
+      "[Decision] Risposta ricevuta: request_id=%lu decision_id=%lu code=%d",
+      static_cast<unsigned long>(response->request_id),
+      static_cast<unsigned long>(response->decision_id),
+      response->decision_code);
+
     if (active_task_->decision_wait_started) {
       active_task_->decision_wait_duration +=
-        std::chrono::steady_clock::now() - *active_task_->decision_wait_started;
+        std::chrono::steady_clock::now() -
+        *active_task_->decision_wait_started;
+
       active_task_->decision_wait_started.reset();
     }
+
     active_task_->phase = TaskPhase::ApplyingDecision;
   }
 
@@ -1146,20 +1159,43 @@ void OpcuaWorker::processActiveTask()
     auto response = takePendingDecision();
 
     if (!response) {
+      RCLCPP_WARN(
+        workerLogger(),
+        "[Decision] ApplyingDecision senza risposta pendente.");
       return;
     }
+
+    RCLCPP_INFO(
+      workerLogger(),
+      "[Decision] Scrittura OPC UA: %s = %d",
+      DECISION_CODE_KEY,
+      response->decision_code);
 
     if (!franka_->setIntegerVariable(
         DECISION_CODE_KEY,
         response->decision_code)) {
+      RCLCPP_ERROR(
+        workerLogger(),
+        "[Decision] Errore nella scrittura di decision_code.");
       return;
     }
+
+    RCLCPP_INFO(
+      workerLogger(),
+      "[Decision] decision_code scritto correttamente.");
 
     if (!completeDecision(
         response->request_id,
         response->decision_id)) {
+      RCLCPP_ERROR(
+        workerLogger(),
+        "[Decision] Impossibile completare la gestione della decisione.");
       return;
     }
+
+    RCLCPP_INFO(
+      workerLogger(),
+      "[Decision] Decisione completata. Ritorno al monitoraggio.");
 
     active_task_->phase = TaskPhase::Monitoring;
     return;
@@ -1174,8 +1210,16 @@ void OpcuaWorker::processActiveTask()
   int32_t process_state = 0;
 
   if (!franka_->readIntegerVariable(PROCESS_STATE_KEY, process_state)) {
+    RCLCPP_WARN(
+      workerLogger(),
+      "[Decision] Lettura di process_state fallita.");
     return;
   }
+
+  RCLCPP_INFO(
+    workerLogger(),
+    "[Decision] process_state = %d",
+    process_state);
 
   if (process_state != WAITING_DECISION_STATE) {
     active_task_->decision_requested_for_checkpoint = false;
@@ -1189,9 +1233,17 @@ void OpcuaWorker::processActiveTask()
   // 6. Lettura del peso dell'oggetto.
   int32_t object_weight = 0;
 
-  if (!franka_->readIntegerVariable("object_weight", object_weight)) {
+  if (!franka_->readIntegerVariable(OBJECT_WEIGHT_KEY, object_weight)) {
+    RCLCPP_WARN(
+      workerLogger(),
+      "[Decision] Lettura di object_weight fallita.");
     return;
   }
+
+  RCLCPP_INFO(
+    workerLogger(),
+    "[Decision] object_weight = %d g",
+    object_weight);
 
   // 7. Preparazione della richiesta.
   FrankaDecisionRequest request;
@@ -1199,7 +1251,8 @@ void OpcuaWorker::processActiveTask()
   request.request_id = active_task_->command.command_id;
   request.decision_id = active_task_->next_decision_id;
 
-  request.description = "L'oggetto è stato identificato. Scegliere come procedere.";
+  request.description =
+    "L'oggetto è stato identificato. Scegliere come procedere.";
 
   request.option_codes = {1, 2};
   request.option_labels = {
@@ -1208,23 +1261,41 @@ void OpcuaWorker::processActiveTask()
   };
 
   request.parameter_names = {"Peso oggetto"};
-
   request.parameter_values = {
     std::to_string(object_weight) + " g"
   };
 
+  const auto request_id = request.request_id;
+  const auto decision_id = request.decision_id;
+
   // 8. Inserimento della richiesta nella coda.
   if (!pushDecisionRequest(std::move(request))) {
+    RCLCPP_ERROR(
+      workerLogger(),
+      "[Decision] Impossibile inserire la richiesta nella coda.");
     return;
   }
+
+  RCLCPP_INFO(
+    workerLogger(),
+    "[Decision] Richiesta inserita nella coda: "
+    "request_id=%lu decision_id=%lu peso=%d g",
+    static_cast<unsigned long>(request_id),
+    static_cast<unsigned long>(decision_id),
+    object_weight);
 
   // 9. Attesa della risposta.
   ++active_task_->next_decision_id;
   active_task_->decision_requested_for_checkpoint = true;
   active_task_->phase = TaskPhase::WaitingDecision;
-  active_task_->decision_wait_started = std::chrono::steady_clock::now();
+  active_task_->decision_wait_started =
+    std::chrono::steady_clock::now();
 
+  RCLCPP_INFO(
+    workerLogger(),
+    "[Decision] In attesa della risposta della FSM.");
 }
+
 
 void OpcuaWorker::printTree(const namespaceTree & node, std::size_t depth)
 {
