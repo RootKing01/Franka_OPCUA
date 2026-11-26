@@ -543,6 +543,9 @@ bool FrankaRobot::readIntegerVariable(
   const std::string & variable_id,
   int32_t & out_value)
 {
+  std::cout << "[FrankaRobot] Lettura variabile intera: "
+            << variable_id << std::endl;
+
   std::vector<std::string> pathKeyInt = kPoseMapPath;
   pathKeyInt.push_back("KeyIntMap");
 
@@ -552,21 +555,45 @@ bool FrankaRobot::readIntegerVariable(
   CallResult result = client_->callMethod(
     pathKeyInt, "Read", args);
 
-  if (!result.ok || result.output_values.empty()) {
+  if (!result.ok) {
+    std::cout << "[FrankaRobot] Read fallita per "
+              << variable_id << std::endl;
+    return false;
+  }
+
+  std::cout << "[FrankaRobot] Read riuscita. Output values: "
+            << result.output_values.size() << std::endl;
+
+  if (result.output_values.empty()) {
+    std::cout << "[FrankaRobot] Nessun valore restituito."
+              << std::endl;
     return false;
   }
 
   if (!result.output_values[0].is<KeyIntPairValue>()) {
+    std::cout << "[FrankaRobot] Tipo restituito diverso da "
+              << "KeyIntPairValue." << std::endl;
     return false;
   }
 
-  const auto & pair = result.output_values[0].as<KeyIntPairValue>();
+  const auto & pair =
+    result.output_values[0].as<KeyIntPairValue>();
+
+  std::cout << "[FrankaRobot] Chiave restituita: "
+            << pair.key << ", valore: "
+            << pair.value << std::endl;
 
   if (pair.key != variable_id) {
+    std::cout << "[FrankaRobot] Chiave restituita diversa "
+              << "da quella richiesta." << std::endl;
     return false;
   }
 
   out_value = pair.value;
+
+  std::cout << "[FrankaRobot] Lettura completata: "
+            << out_value << std::endl;
+
   return true;
 }
 
