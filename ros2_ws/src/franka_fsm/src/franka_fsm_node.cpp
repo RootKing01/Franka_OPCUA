@@ -195,11 +195,6 @@ void FrankaFsmNode::runInteractiveMenu()
       continue;
     }
 
-    if (choice == "4") {
-      answerPendingDecision();
-      continue;
-    }
-
     if (choice == "3") {
       std::lock_guard<std::mutex> lock(state_mutex_);
       if (task_active_) {
@@ -271,8 +266,7 @@ void FrankaFsmNode::showMainMenu(bool task_active) const
   std::cout << "\n=== Franka FSM ===\n"
             << "1. Mostra comandi\n"
             << "2. Invia comando\n"
-            << "3. Termina\n"
-            << "4. Rispondi a una decisione\n";
+            << "3. Termina\n";
 
 
   if (task_active) {
@@ -469,8 +463,23 @@ bool FrankaFsmNode::answerPendingDecision()
     std::cout << '\n';
   }
 
+  if(request.parameter_names.size() != request.parameter_values.size())
+  {
+    std::cout << "ATTENZIONE: parametri della decisione incoerenti, non mostrati.\n";
+
+  } else {
+    
+    const std::size_t count = std::min(request.parameter_names.size(), request.parameter_values.size());
+    for(std::size_t i = 0; i < count; i++)
+    {
+      std::cout << request.parameter_names[i] << ":" << request.parameter_values[i] << "\n";
+    }
+
+  }
+
   std::string input;
   int32_t decision_code = 0;
+  
   while (true) {
     std::cout << "Codice decisione: " << std::flush;
     if (!std::getline(std::cin, input)) {
@@ -516,7 +525,7 @@ bool FrankaFsmNode::answerPendingDecision()
       pending_decisions_.pop();
     }
   }
-  std::cout << "Decisione inviata.\n";
+  std::cout << "Decisione inviata. Task in corso: 's' per STOP\n";
   return false;
 }
 
